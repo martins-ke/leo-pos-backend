@@ -27,21 +27,22 @@ public class Debt {
 	@JsonIgnore
 	private Customer customer;
 
+	@Column(name = "sale_id", unique = true)
+	private String saleId;
+
 	@Column(nullable = false, precision = 12, scale = 2)
-	private BigDecimal principal;
+	private BigDecimal debtAmount;
 
 	@Column(nullable = false, precision = 12, scale = 2)
 	private BigDecimal outstandingBalance;
 
 	@Column(nullable = false)
-	private String status;
+	private String status; 
 
 	private String description;
 	private LocalDate dueDate;
-	@Column(nullable = false, updatable = false)
+	@Column(nullable = false, updatable = false) 
 	private String createdBy;
-	@Column(nullable = false, updatable = false)
-	private String createdByName;
 
 	@CreationTimestamp
 	@Column(updatable = false)
@@ -53,15 +54,20 @@ public class Debt {
 	protected Debt() {}
 
 	public Debt(String id, Customer customer, BigDecimal amount, String description,
-			LocalDate dueDate, String createdBy, String createdByName) {
+			LocalDate dueDate, String createdBy) {
+		this(id, customer, amount, description, dueDate, createdBy, null);
+	}
+
+	public Debt(String id, Customer customer, BigDecimal amount, String description,
+			LocalDate dueDate, String createdBy, String saleId) {
 		this.id = id;
 		this.customer = customer;
-		this.principal = amount;
+		this.saleId = saleId;
+		this.debtAmount = amount;
 		this.outstandingBalance = amount;
 		this.description = description;
 		this.dueDate = dueDate;
 		this.createdBy = createdBy;
-		this.createdByName = createdByName;
 		this.status = "OPEN";
 	}
 
@@ -76,13 +82,13 @@ public class Debt {
 
 	public String getId() { return id; }
 	public Customer getCustomer() { return customer; }
-	public BigDecimal getPrincipal() { return principal; }
+	public String getSaleId() { return saleId; }
+	public BigDecimal getPrincipal() { return debtAmount; }
 	public BigDecimal getOutstandingBalance() { return outstandingBalance; }
 	public String getStatus() { return status; }
 	public String getDescription() { return description; }
 	public LocalDate getDueDate() { return dueDate; }
 	public String getCreatedBy() { return createdBy; }
-	public String getCreatedByName() { return createdByName; }
 	public Instant getCreatedAt() { return createdAt; }
 	public Instant getPaidAt() { return paidAt; }
 	public Instant getPurgeAt() { return purgeAt; }

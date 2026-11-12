@@ -3,6 +3,7 @@ package com.leo.pos.finance;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,6 +65,22 @@ public class FinanceService {
 		shopAccessService.requireOwnerShop(shopId, actor);
 		return expenseRepository.findByShopIdOrderByExpenseDateDescCreatedAtDesc(
 				shopId, PageRequest.of(page, Math.min(size, 100)));
+	}
+
+	@Transactional(readOnly = true)
+	public BigDecimal dailyExpenseTotal(String shopId, User actor) {
+		shopAccessService.requireOwnerShop(shopId, actor);
+		LocalDate today = LocalDate.now();
+		return expenseRepository.sumByShopAndPeriod(shopId, today, today);
+	}
+
+	@Transactional(readOnly = true)
+	public BigDecimal dailyStockWithdrawalTotal(String shopId, User actor) {
+		shopAccessService.requireOwnerShop(shopId, actor);
+		LocalDate today = LocalDate.now();
+		ZoneId zone = ZoneId.systemDefault();
+		return withdrawalRepository.sumByShopAndOccurredAt(shopId,
+				today.atStartOfDay(zone).toInstant(), today.plusDays(1).atStartOfDay(zone).toInstant());
 	}
 
 	@Transactional

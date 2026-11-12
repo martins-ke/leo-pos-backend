@@ -3,8 +3,8 @@ package com.leo.pos.product;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +20,6 @@ import jakarta.validation.Valid;
 
 @RequestMapping("/products")
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @PreAuthorize("hasAnyRole('OWNER', 'STAFF')")
 public class ProductController {
 	private final ProductService productService;
@@ -67,6 +66,13 @@ public class ProductController {
 	public ResponseEntity<ApiResponse<Product>> updateProduct(
 			@PathVariable String id, @Valid @RequestBody ProductRequest req, @AuthenticationPrincipal User actor){
 		return productService.updateProduct(id, req, actor);
+	}
+
+	@DeleteMapping("/{id}/category")
+	@PreAuthorize("hasRole('OWNER')")
+	public ResponseEntity<ApiResponse<Product>> clearProductCategory(
+			@PathVariable String id, @AuthenticationPrincipal User actor) {
+		return productService.clearProductCategory(id, actor);
 	}
 
 	@org.springframework.web.bind.annotation.PatchMapping("/{id}/stock")

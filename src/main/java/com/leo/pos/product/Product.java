@@ -3,6 +3,7 @@ package com.leo.pos.product;
 import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.leo.pos.productCategories.ProductCategory;
 import com.leo.pos.shop.Shop;
 
 import jakarta.persistence.Entity;
@@ -29,6 +30,10 @@ public class Product {
 	private boolean active;
 	@JoinColumn(name = "shop_id") @ManyToOne
 	private Shop shop;
+
+	@ManyToOne
+	@JoinColumn(name = "category_id")
+	private ProductCategory category;
 	
 	public Product() {}
 
@@ -44,6 +49,13 @@ public class Product {
 		this.unit = unit;
 		this.active = active;
 		this.shop = shop;
+	}
+
+	public Product(String id, String name, BigDecimal buyingPrice, BigDecimal sellingPrice,
+			float quantity, float minStockLevel, String unit, boolean active, Shop shop,
+			ProductCategory category) {
+		this(id, name, buyingPrice, sellingPrice, quantity, minStockLevel, unit, active, shop);
+		this.category = category;
 	}
 
 	public String getId() {
@@ -116,5 +128,13 @@ public class Product {
 
 	public void setShop(Shop shop) {
 		this.shop = shop;
+	}
+
+	public ProductCategory getCategory() {
+		return category;
+	}
+
+	public void setCategory(ProductCategory category) {
+		this.category = category;
 	}
 }

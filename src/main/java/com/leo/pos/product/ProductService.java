@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.leo.pos.ApiResponse;
+import com.leo.pos.productCategories.ProductCategory;
+import com.leo.pos.productCategories.ProductCategoryRepository;
 import com.leo.pos.security.ShopAccessService;
 import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
@@ -21,17 +23,21 @@ import jakarta.persistence.EntityNotFoundException;
 public class ProductService {
 
 	private final ProductRepository productRepo;
+	private final ProductCategoryRepository categoryRepo;
 	private final ShopRepository shopRepo;
 	private final ShopAccessService shopAccessService;
 
-	public ProductService(ProductRepository productRepo, ShopRepository shopRepo, ShopAccessService shopAccessService) {
+	public ProductService(ProductRepository productRepo, ProductCategoryRepository categoryRepo,
+			ShopRepository shopRepo, ShopAccessService shopAccessService) {
 		this.productRepo = productRepo;
+		this.categoryRepo = categoryRepo;
 		this.shopRepo = shopRepo;
 		this.shopAccessService = shopAccessService;
 	}
 
 	@Transactional
 	public ResponseEntity<ApiResponse<Product>> createProduct(ProductRequest req, String shopId, User actor) {
+		validatePriceRelationship(req);
 		Shop shop;
 		if (shopId == null || shopId.isBlank()) {
 			if (!"OWNER".equalsIgnoreCase(actor.getRole())) {
@@ -51,7 +57,8 @@ public class ProductService {
 					"Failed! Product with name '" + name + "' already exists in this shop.", false, Instant.now()));
 		}
 		Product product = new Product(UUID.randomUUID().toString(), name, req.buyingPrice(), req.sellingPrice(),
-				req.quantityInStock(), req.minStockLevel(), req.unit().trim(), true, shop);
+				req.quantityInStock(), req.minStockLevel(), req.unit().trim(), true, shop,
+				resolveCategory(req.categoryId(), shop));
 		return ResponseEntity.status(201).body(new ApiResponse<>(
 				productRepo.save(product), "Success, Product created", true, Instant.now()));
 	}
@@ -63,8 +70,7 @@ public class ProductService {
 			shopAccessService.requireShopAccess(shopId, actor);
 			products.addAll(productRepo.findByShopIdAndActiveTrue(shopId));
 		} else {
-			String ownerId = "OWNER".equalsIgnoreCase(actor.getRole()) ? actor.getId() : actor.getCreatedBy();
-			for (Shop shop : shopRepo.findByUserId(ownerId)) {
+			for (Shop shop : shopAccessService.getAccessibleShops(actor)) {
 				products.addAll(productRepo.findByShopIdAndActiveTrue(shop.getId()));
 			}
 		}
@@ -84,6 +90,7 @@ public class ProductService {
 
 	@Transactional
 	public ResponseEntity<ApiResponse<Product>> updateProduct(String id, ProductRequest req, User actor) {
+		validatePriceRelationship(req);
 		Product product = productRepo.findByIdForUpdate(id)
 				.orElseThrow(() -> new EntityNotFoundException("Product not found"));
 		shopAccessService.requireOwnerShop(product.getShop().getId(), actor);
@@ -93,8 +100,45 @@ public class ProductService {
 		product.setQuantity(req.quantityInStock());
 		product.setMinStockLevel(req.minStockLevel());
 		product.setUnit(req.unit().trim());
+		if (req.clearCategory()) {
+			product.setCategory(null);
+		} else if (req.categoryId() != null && !req.categoryId().isBlank()) {
+			product.setCategory(resolveCategory(req.categoryId(), product.getShop()));
+		}
 		return ResponseEntity.ok(new ApiResponse<>(productRepo.save(product), "Product updated successfully", true,
 				Instant.now()));
+	}
+
+	@Transactional
+	public ResponseEntity<ApiResponse<Product>> clearProductCategory(String id, User actor) {
+		Product product = productRepo.findByIdForUpdate(id)
+				.orElseThrow(() -> new EntityNotFoundException("Product not found"));
+		shopAccessService.requireOwnerShop(product.getShop().getId(), actor);
+		product.setCategory(null);
+		return ResponseEntity.ok(new ApiResponse<>(productRepo.save(product), "Product category cleared", true,
+				Instant.now()));
+	}
+
+	private ProductCategory resolveCategory(String categoryId, Shop shop) {
+		if (categoryId == null || categoryId.isBlank()) {
+			return null;
+		}
+		ProductCategory category = categoryRepo.findByIdAndShop_Id(categoryId, shop.getId())
+				.orElseThrow(() -> new IllegalArgumentException(
+						"Product category must belong to the same shop as the product."));
+		if (!category.isActive()) {
+			throw new IllegalArgumentException("Archived product categories cannot be assigned to products.");
+		}
+		return category;
+	}
+
+	private void validatePriceRelationship(ProductRequest req) {
+		if (req.buyingPrice() == null || req.sellingPrice() == null) {
+			throw new IllegalArgumentException("Buying and selling prices are required.");
+		}
+		if (req.sellingPrice().compareTo(req.buyingPrice()) < 0) {
+			throw new IllegalArgumentException("Selling price must be greater than or equal to buying price.");
+		}
 	}
 
 	@Transactional

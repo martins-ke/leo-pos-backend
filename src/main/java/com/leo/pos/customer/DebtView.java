@@ -14,9 +14,9 @@ public record DebtView(
 		String description,
 		LocalDate dueDate,
 		String status,
-		String createdBy,
-		String createdByName,
+		String createdBy, 
 		Instant createdAt,
 		Instant paidAt,
-		Instant purgeAt
+		Instant purgeAt,
+		String saleId
 ) {}

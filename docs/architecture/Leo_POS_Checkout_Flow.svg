@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1700 1500" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
+  <title id="title">Leo Point of Sale Checkout Flow</title>
+  <desc id="description">Current sale creation workflow from idempotency reservation and product locking through validation, stock updates, payment or debt effects, audit and response.</desc>
+  <defs>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#172033}
+      .title{font-size:30px;font-weight:700;fill:#fff}
+      .subtitle{font-size:14px;fill:#cbd5e1}
+      .step{fill:#fff;stroke:#ccd8e7;stroke-width:1.5}
+      .decision{fill:#fff8e8;stroke:#d6a84d;stroke-width:1.5}
+      .success{fill:#eaf8f1;stroke:#78bb98;stroke-width:1.5}
+      .warning{fill:#fff4e8;stroke:#e1a35e;stroke-width:1.5}
+      .label{font-size:13px;font-weight:700}
+      .detail{font-size:12px;fill:#526176}
+      .arrow{fill:none;stroke:#57708e;stroke-width:2}
+      .branch{font-size:11px;font-weight:700;fill:#8a5b11}
+      .foot{font-size:12px;fill:#475569}
+      .boundary{fill:none;stroke:#8ba0bc;stroke-dasharray:8 6;stroke-width:1.5}
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#57708e"/>
+    </marker>
+  </defs>
+  <rect width="1700" height="1500" fill="#f6f8fc"/>
+  <rect width="1700" height="105" fill="#162844"/>
+  <text class="title" x="48" y="52">Leo | POS checkout flow</text>
+  <text class="subtitle" x="48" y="79">Current SaleService transaction · request includes Idempotency-Key · POST /sales</text>
+  <rect class="boundary" x="270" y="135" width="1160" height="1235" rx="18"/>
+  <text class="detail" x="300" y="163">Transactional sale processing</text>
+
+  <rect class="step" x="630" y="185" width="440" height="76" rx="12"/>
+  <text class="label" x="850" y="215" text-anchor="middle">Receive checkout request</text>
+  <text class="detail" x="850" y="237" text-anchor="middle">Cart, shop/customer, totals, payment method + key</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 261 V289"/>
+  <rect class="step" x="630" y="289" width="440" height="76" rx="12"/>
+  <text class="label" x="850" y="319" text-anchor="middle">Reserve idempotency key</text>
+  <text class="detail" x="850" y="341" text-anchor="middle">Missing, invalid or reused key → reject (400 / 409)</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 365 V393"/>
+
+  <polygon class="decision" points="850,393 1000,443 850,493 700,443"/>
+  <text class="label" x="850" y="439" text-anchor="middle">Cart non-empty</text>
+  <text class="detail" x="850" y="457" text-anchor="middle">and product IDs unique?</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1000 443 H1195"/>
+  <text class="branch" x="1080" y="431">NO</text>
+  <rect class="warning" x="1195" y="410" width="205" height="70" rx="10"/>
+  <text class="label" x="1297" y="439" text-anchor="middle">400 · no sale</text>
+  <text class="detail" x="1297" y="459" text-anchor="middle">Validation response</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 493 V521"/>
+  <text class="branch" x="861" y="514">YES</text>
+  <rect class="step" x="630" y="521" width="440" height="82" rx="12"/>
+  <text class="label" x="850" y="551" text-anchor="middle">Lock products in sorted ID order</text>
+  <text class="detail" x="850" y="574" text-anchor="middle">Load rows for update to reduce stock races</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 603 V631"/>
+
+  <rect class="step" x="630" y="631" width="440" height="90" rx="12"/>
+  <text class="label" x="850" y="661" text-anchor="middle">Resolve shop + require actor access</text>
+  <text class="detail" x="850" y="684" text-anchor="middle">Each product must belong to this shop</text>
+  <text class="detail" x="850" y="702" text-anchor="middle">Owner/staff authorization is checked server-side</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 721 V749"/>
+  <rect class="step" x="630" y="749" width="440" height="105" rx="12"/>
+  <text class="label" x="850" y="779" text-anchor="middle">Validate each product and price</text>
+  <text class="detail" x="850" y="802" text-anchor="middle">Active · stock available · finite positive quantity</text>
+  <text class="detail" x="850" y="820" text-anchor="middle">Current unit price matches submitted price</text>
+  <text class="detail" x="850" y="838" text-anchor="middle">Recalculate total; reject client total mismatch</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 854 V882"/>
+  <rect class="step" x="630" y="882" width="440" height="100" rx="12"/>
+  <text class="label" x="850" y="912" text-anchor="middle">Validate payment + optional customer</text>
+  <text class="detail" x="850" y="935" text-anchor="middle">Allowed methods, tender and amount rules</text>
+  <text class="detail" x="850" y="953" text-anchor="middle">DEBT requires same-shop credit-eligible customer</text>
+  <text class="detail" x="850" y="971" text-anchor="middle">Invalid input → 400; no sale is written</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 982 V1010"/>
+  <rect class="step" x="630" y="1010" width="440" height="95" rx="12"/>
+  <text class="label" x="850" y="1040" text-anchor="middle">Update stock and create sale</text>
+  <text class="detail" x="850" y="1063" text-anchor="middle">Decrement quantities; save sale + item snapshots</text>
+  <text class="detail" x="850" y="1081" text-anchor="middle">Receipt number and computed total are server-side</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M850 1105 V1133"/>
+
+  <polygon class="decision" points="850,1133 1000,1183 850,1233 700,1183"/>
+  <text class="label" x="850" y="1179" text-anchor="middle">Payment method</text>
+  <text class="detail" x="850" y="1197" text-anchor="middle">DEBT or paid sale?</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M700 1183 H520 V1258"/>
+  <text class="branch" x="610" y="1171">DEBT</text>
+  <rect class="step" x="340" y="1258" width="360" height="75" rx="12"/>
+  <text class="label" x="520" y="1288" text-anchor="middle">Create customer debt</text>
+  <text class="detail" x="520" y="1310" text-anchor="middle">No payment ledger inflow at checkout</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1000 1183 H1180 V1258"/>
+  <text class="branch" x="1080" y="1171">PAID</text>
+  <rect class="step" x="1000" y="1258" width="360" height="75" rx="12"/>
+  <text class="label" x="1180" y="1288" text-anchor="middle">Post ledger cash inflow</text>
+  <text class="detail" x="1180" y="1310" text-anchor="middle">SALE_RECEIPT · payment method</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M520 1333 V1392 H850"/>
+  <path class="arrow" marker-end="url(#arrow)" d="M1180 1333 V1392 H850"/>
+  <rect class="success" x="630" y="1385" width="440" height="76" rx="12"/>
+  <text class="label" x="850" y="1415" text-anchor="middle">Audit + complete key + commit</text>
+  <text class="detail" x="850" y="1437" text-anchor="middle">Return 201 with sale and receipt</text>
+
+  <text class="foot" x="48" y="1475">Retry caveat: the key is reserved before validation. Some validation failures return a 4xx response without throwing; that reservation may commit, so a corrected retry needs a new key.</text>
+</svg>

@@ -1,5 +1,7 @@
 package com.leo.pos.security;
 
+import java.util.List;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -44,6 +46,21 @@ public class ShopAccessService {
 		}
 		// If not staff (should be owner, already handled), deny access
 		throw new AccessDeniedException("You do not have access to this shop");
+	}
+
+	public List<Shop> getAccessibleShops(User actor) {
+		if (actor == null || !"ACTIVE".equalsIgnoreCase(actor.getStatus())) {
+			throw new AccessDeniedException("An active user is required");
+		}
+		if ("OWNER".equalsIgnoreCase(actor.getRole())) {
+			return shopRepository.findByUserId(actor.getId());
+		}
+		if (!"STAFF".equalsIgnoreCase(actor.getRole()) || actor.getShops() == null) {
+			throw new AccessDeniedException("You do not have access to these shops");
+		}
+		return actor.getShops().stream()
+				.map(shop -> requireShopAccess(shop.getId(), actor))
+				.toList();
 	}
 
 	public Shop requireOwnerShop(String shopId, User actor) {

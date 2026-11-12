@@ -21,8 +21,11 @@ public class JwtService {
 	private final long expirationMs;
 
 	public JwtService(
-			@Value("${jwt.secret:defaultSecretKeyForDevelopmentMustBe32BytesOrLonger!}") String secret,
+			@Value("${jwt.secret}") String secret,
 			@Value("${jwt.expiration-ms:604800000}") long expirationMs) { // default 7 days
+		if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+			throw new IllegalArgumentException("JWT secret must be at least 32 bytes");
+		}
 		this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
 		this.expirationMs = expirationMs;
 	}

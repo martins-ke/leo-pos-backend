@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.leo.pos.product.Product;
 import com.leo.pos.product.ProductRepository;
+import com.leo.pos.finance.ExpenseRepository;
 import com.leo.pos.sale.Sale;
 import com.leo.pos.sale.SaleItem;
 import com.leo.pos.sale.SaleRepository;
@@ -40,10 +41,17 @@ class DashboardServiceTest {
 		when(shopRepo.findByUserId("owner-1")).thenReturn(List.of(shop));
 		when(saleRepo.findByShopIdOrderByCreatedAtDesc("shop-1")).thenReturn(List.of(sale));
 		when(productRepo.findByShopId("shop-1")).thenReturn(List.of());
+		ExpenseRepository expenseRepo = mock(ExpenseRepository.class);
+		when(expenseRepo.sumByShopAndPeriod(org.mockito.ArgumentMatchers.eq("shop-1"),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+				.thenReturn(new BigDecimal("3.00"), new BigDecimal("5.00"));
 		DashboardSummaryResponse summary = new DashboardService(saleRepo, productRepo,
-				shopRepo, mock(ShopAccessService.class)).getSummary(null, actor);
+				shopRepo, mock(ShopAccessService.class), expenseRepo).getSummary(null, actor);
 
 		assertEquals(0, new BigDecimal("10.00").compareTo(summary.todayGrossProfit()));
 		assertEquals(0, new BigDecimal("10.00").compareTo(summary.monthGrossProfit()));
+		assertEquals(0, new BigDecimal("7.00").compareTo(summary.todayNetProfit()));
+		assertEquals(0, new BigDecimal("5.00").compareTo(summary.monthNetProfit()));
+		assertEquals(0, new BigDecimal("20.00").compareTo(summary.todayCashCollected()));
 	}
 }

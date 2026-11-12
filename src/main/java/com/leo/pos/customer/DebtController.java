@@ -53,6 +53,16 @@ public class DebtController {
 				debtService.create(request, idempotencyKey, actor), "Debt recorded", true, Instant.now()));
 	}
 
+	@PostMapping("/from-sale/{saleId}")
+	public ResponseEntity<ApiResponse<DebtView>> convertSaleToDebt(
+			@PathVariable String saleId,
+			@RequestHeader("Idempotency-Key") String idempotencyKey,
+			@AuthenticationPrincipal User actor) {
+		return ResponseEntity.ok(new ApiResponse<>(
+				debtService.convertSaleToDebt(saleId, idempotencyKey, actor),
+				"Sale converted to customer debt", true, Instant.now()));
+	}
+
 	@PostMapping("/{id}/payments")
 	public ResponseEntity<ApiResponse<DebtView>> recordPayment(
 			@PathVariable String id, @Valid @RequestBody DebtPaymentRequest request,

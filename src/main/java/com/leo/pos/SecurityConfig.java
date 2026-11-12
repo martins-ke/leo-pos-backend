@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,9 +26,12 @@ import com.leo.pos.security.JwtAuthenticationFilter;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthFilter;
+	private final List<String> allowedOrigins;
 
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
+			@Value("${leo.cors.allowed-origins}") List<String> allowedOrigins) {
 		this.jwtAuthFilter = jwtAuthFilter;
+		this.allowedOrigins = allowedOrigins;
 	}
 
 	@Bean
@@ -38,6 +42,7 @@ public class SecurityConfig {
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 					.requestMatchers("/auth/**", "/error").permitAll()
+					.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 					.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -55,7 +60,7 @@ public class SecurityConfig {
 	@Bean
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOriginPatterns(List.of("*"));
+		configuration.setAllowedOrigins(allowedOrigins);
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Idempotency-Key", "X-Requested-With"));
 		configuration.setAllowCredentials(true);

@@ -1,269 +1,176 @@
-# Software Requirements Specification (SRS)
-## Leo — Retail Point of Sale (POS) System
-**Document Version:** 1.1
-**SDLC Stage:** MVP Specification
-**Status:** Updated for financial workflow implementation
+# Software Requirements Specification
+## Leo — Retail Point of Sale and Shop Operations
 
----
-
-## 1. Introduction
-
-### 1.1 Purpose
-This Software Requirements Specification (SRS) document provides the complete, authoritative specification of the functional, non-functional, security, and architectural requirements for **Leo** — a multi-tenant, multi-shop retail Point of Sale (POS) system. It serves as the primary blueprint for engineering, quality assurance, and product delivery.
-
-### 1.2 Scope of the System
-**Leo** is a web-based SaaS POS platform designed for retail shop owners in Kenya and similar markets. The platform:
-- Enables shop owners to manage **one or more shops** (hardware, agrovet, general retail, etc.) from a single account.
-- Provides **cashiers** with a fast, simple POS interface for processing sales.
-- Gives **owners** full visibility into products, inventory, staff, and sales reports.
-- Tracks customers and prior sales independently from customer debts, and records debt repayments, operating expenses, stock withdrawals, and owner drawings.
-- Maintains shop cash/account balances separately from operating profit so owners can distinguish business cash from earnings and drawings.
-- Is built to handle cash payments in the MVP, with M-Pesa STK Push integration in a future phase.
-- Is structured as a **tiered SaaS product** — a single shop in the starter plan, multiple shops/departments in higher plans.
-
-### 1.3 Target Users & Roles
-
-| Role | Description |
+| Field | Value |
 |---|---|
-| **Owner** | Full system access — manages shops, products, staff, inventory, and views all reports |
-| **Cashier** | Restricted POS access — can process sales only within their assigned shop |
+| Version | 2.0 |
+| Status | Current product baseline; roadmap items are labeled |
+| Last reviewed | 2026-11-05 |
+| Audience | Product, engineering, QA, operations |
 
-### 1.4 Definitions & Abbreviations
-- **Shop**: A business unit (e.g. hardware store, agrovet, retail outlet) owned by one owner
-- **Product**: An item available for sale in a shop with name, price, category, and stock quantity
-- **Sale / Transaction**: A completed checkout event with one or more line items
-- **Sale Item**: A single product line within a sale (product, quantity, subtotal)
-- **Stock**: Quantity of a product available in a shop
-- **Low Stock**: When a product's quantity falls at or below its defined minimum stock threshold
-- **Customer Debt**: A customer balance recorded independently from a sale. A debt never changes or identifies a sale.
-- **Owner Drawing**: Cash removed from a shop account for the owner; it reduces available cash and remaining distributable profit, but is not an operating expense.
-- **Shop Account**: A per-shop cash-flow ledger that records opening capital and subsequent cash inflows/outflows.
-- **SRS**: Software Requirements Specification
-- **POS**: Point of Sale
-- **RBAC**: Role-Based Access Control
+This specification distinguishes implemented behavior from planned work. “Current” describes the application represented by the frontend and backend code; it is not a claim that the system has passed production or performance acceptance. For deployment and API details, see [System Architecture](System_Design_and_Architecture.md), [API Reference](../api/API_REFERENCE.md), and [Production Setup](../deployment/production-setup.md).
 
----
+## 1. Purpose and scope
 
-## 2. System Architecture & Context
+Leo is a browser-based retail operations application for shop owners and staff. It combines point-of-sale checkout, product and stock management, sales history, customer records, debt tracking, and shop-level financial records. Shop owners can manage multiple outlets, while a separately provisioned platform administrator can view and manage owner accounts.
 
-### 2.1 System Context Diagram
+The current system consists of a React single-page frontend and a Spring Boot REST API backed by a relational database. It is not currently a Progressive Web App and does not provide an M-Pesa payment gateway, subscription billing, email-based password recovery, or a customer-facing storefront.
 
-```mermaid
-flowchart TD
-    classDef ownerNode fill:#4f46e5,stroke:#3730a3,stroke-width:2px,color:#ffffff,font-weight:bold;
-    classDef cashierNode fill:#0284c7,stroke:#0369a1,stroke-width:2px,color:#ffffff,font-weight:bold;
-    classDef coreNode fill:#0f172a,stroke:#334155,stroke-width:2px,color:#ffffff,font-weight:bold;
-    classDef extNode fill:#d97706,stroke:#b45309,stroke-width:2px,color:#ffffff,font-weight:bold;
+### 1.1 User roles
 
-    Owner["👑 Shop Owner\n(Full Access: Shops, Products, Staff, Reports)"]:::ownerNode
-    Cashier["🧾 Cashier\n(POS Only: Sell within assigned shop)"]:::cashierNode
-    LeoCore["⚡ Leo POS Core\n(Spring Boot / Java / MySQL)"]:::coreNode
-    EmailSvc["✉️ Email Service\n(Password Resets)"]:::extNode
+| Role | Current responsibilities |
+|---|---|
+| `SUPER_ADMIN` | View platform tenant statistics and owner accounts; toggle an owner account's status. |
+| `OWNER` | Manage owned shops, staff, products, sales, customers, and shop financial workflows. |
+| `STAFF` | Use permitted sales, customer, and debt workflows for explicitly assigned shops. |
 
-    Owner -->|Manages shops, products, inventory, staff| LeoCore
-    Cashier -->|Processes sales on POS screen| LeoCore
-    LeoCore -->|Sends password reset emails| EmailSvc
-```
+The API is authoritative for authentication, role checks, shop ownership, and staff-to-shop assignment. Frontend route guards improve navigation but do not grant API access. Unscoped staff product/sales list requests currently require a backend assignment-filter fix before production; see [Security and Data Handling](../security/SECURITY_AND_DATA_HANDLING.md).
 
----
+### 1.2 Terms
 
-## 3. Detailed Functional Requirements
+- **Shop / outlet:** A business location owned by an owner account.
+- **Tenant:** An owner account and the resources it owns. This is a business boundary, not a separate username namespace.
+- **Sale:** A receipt and its line items, recorded for one shop and one actor.
+- **Debt:** An outstanding customer amount. It can be entered independently or created from a credit sale.
+- **Account ledger:** A shop-scoped record of cash inflows and outflows; it is not itself a profit statement.
+- **Idempotency key:** A client-supplied key used by supported mutations to prevent a retried request from posting the same operation twice.
 
-### 3.1 Authentication & RBAC (FR-AUTH)
+## 2. Product boundaries
 
-- **FR-AUTH-1 (Bootstrap Admin):**
-  The first user to register on the system is automatically provisioned as **Owner** with `ACTIVE` status and full access — no approval required.
+### 2.1 Current capabilities
 
-- **FR-AUTH-2 (Cashier Registration & Approval):**
-  Subsequent registrations default to `PENDING`. The Owner approves and assigns the `CASHIER` role and links the cashier to one or more shops.
+1. Platform owner setup, owner registration, login, and stateless bearer-token authentication.
+2. Owner shop creation and listing; shop-scoped access for owners and assigned staff.
+3. Product catalogue and stock changes, including quantity-only restocking and costed stock purchases.
+4. Sale checkout, receipt data, sales history, inventory deduction, and supported payment-method recording.
+5. Staff creation, shop assignment, approval/status management, and removal.
+6. Customer records and eligibility controls; independent debt records, credit sales, debt conversion, and repayments.
+7. Expenses, personal stock withdrawals, shop account transactions, capital, drawings, and dashboard summaries.
+8. Platform-level owner account listing, summary metrics, and account status changes.
+9. Financial activity auditing and scheduled deletion of settled debt-specific records after the configured retention period.
 
-- **FR-AUTH-3 (Role-Based Route Guards):**
-  - `OWNER`: Access to all routes — dashboard, shops, products, inventory, staff management, sales reports.
-  - `CASHIER`: Access to POS screen only within their assigned shop(s).
+### 2.2 Explicitly not current capabilities
 
-- **FR-AUTH-4 (Password Recovery):**
-  Users can request a password reset via email. System generates a cryptographic token valid for **15 minutes** and delivers a recovery link via email.
+These are roadmap items or operational work, not capabilities to assume from the current UI/API:
 
-- **FR-AUTH-5 (Temporary Identity Header):**
-  Until the separate security-hardening phase, the frontend sends the logged-in user's ID in `X-User-Id`. The backend loads the active user and role from the database; `X-User-Role` is not authoritative. This temporary identity mechanism is not secure against a caller who can forge headers and must be replaced before production.
+- M-Pesa STK Push or other payment-provider processing. A payment method can be recorded; this is not payment confirmation from a provider.
+- Subscription plans, plan enforcement, or billing.
+- Email-driven password reset/recovery.
+- A notification-center API, browser push notifications, or promised 45-second notification polling.
+- Product category management endpoints or category-specific inventory reporting.
+- A full sales analytics API for top-selling products or sales-by-shop reports. The current dashboard provides its implemented summary only.
+- An automatic database migration runner.
 
----
+## 3. Functional requirements
 
-### 3.2 Shop Management (FR-SHOP)
+“Current” requirements below describe intended observable behavior that exists in the present implementation. Items marked “Planned” must not be presented as already supported.
 
-- **FR-SHOP-1 (Shop Creation):**
-  Owner can create one or more shops with: name, type (General Retail / Hardware / Agrovet / Other), description, and location.
+### 3.1 Authentication and account lifecycle
 
-- **FR-SHOP-2 (Shop Isolation):**
-  Each shop maintains its own independent product catalogue, stock levels, and sales history. A product in Shop A does not appear in Shop B.
+- **FR-AUTH-1 — Platform setup (Current):** Expose setup availability and permit creation of one `SUPER_ADMIN`. When a setup key is configured, require it. Without a key, allow setup only from loopback in the development profile. Refuse setup after a platform owner exists.
+- **FR-AUTH-2 — Owner registration (Current):** Public registration always creates an active `OWNER`, provisions the initial shop and its account ledger, and ignores any requested role elevation.
+- **FR-AUTH-3 — Staff provisioning (Current):** Owners create staff accounts and assign staff to shops. Public registration cannot create staff or platform administrators.
+- **FR-AUTH-4 — Login (Current):** Authenticate username or email plus password; only active accounts may use protected services. Reject invalid credentials, pending/deactivated accounts, and staff whose owner account is inactive.
+- **FR-AUTH-5 — Access token (Current):** Return a signed, expiring JWT after successful login. Protected API calls require `Authorization: Bearer <token>`. The API reloads the account and checks its active status before establishing the authenticated principal.
+- **FR-AUTH-6 — Password recovery (Planned):** Provide an email-based, expiring reset flow only after delivery, token lifecycle, abuse controls, and recovery behavior are implemented and tested.
 
-- **FR-SHOP-3 (Multi-Shop Scoping):**
-  Owner dashboard aggregates metrics across all owned shops. Cashier dashboard scopes to only their assigned shop(s).
+### 3.2 Shop and access scope
 
-- **FR-SHOP-4 (Plan-Based Shop Limits):**
-  - `STARTER` plan: 1 shop maximum.
-  - `BUSINESS` plan: Up to 3 shops (multiple departments under one roof).
-  - `ENTERPRISE` plan: Unlimited shops and branches.
-  *(Plan enforcement is a future billing feature — MVP creates one shop per owner.)*
+- **FR-SHOP-1 (Current):** An owner can create, list, inspect, and delete their own shops.
+- **FR-SHOP-2 (Current):** Owners can access only their own shops. Staff can access only shops owned by their creator and explicitly assigned to them.
+- **FR-SHOP-3 (Required):** Products, sales, customers, debts, and account activity must be scoped to a shop and checked server-side. The unscoped staff product/sales list paths are a known implementation gap and must be fixed before production.
+- **FR-SHOP-4 (Planned):** Subscription tiers, billing, and plan-based shop limits are not enforced in the current system.
 
----
+### 3.3 Products and stock
 
-### 3.3 Product & Category Management (FR-PROD)
+- **FR-INV-1 (Current):** Owners can create, update, deactivate, and list products; staff can read active products for shops to which they are assigned.
+- **FR-INV-2 (Current):** Product records include pricing, unit, quantity, and minimum stock level. Product/category taxonomy management is not exposed as a current API capability.
+- **FR-INV-3 (Current):** Owners can make quantity-only stock adjustments or record a stock purchase with cost and corresponding shop-account outflow. These operations must be distinguishable in financial views.
+- **FR-INV-4 (Current):** A sale must reject missing, inactive, wrong-shop, repriced, or insufficient-stock line items. The server calculates the total from current product prices and rejects a client total that differs.
+- **FR-INV-5 (Planned):** Automated low-stock notification delivery and notification-center workflows are not currently specified as implemented.
 
-- **FR-PROD-1 (Product Catalogue):**
-  Owner can add products to a shop with: name, category, buying price, selling price, stock quantity, minimum stock threshold (for low-stock alerts), and unit of measurement.
+### 3.4 Sales and checkout
 
-- **FR-PROD-2 (Product Categories):**
-  Products belong to categories. Owner can create custom categories per shop (e.g., *Electronics*, *Cereals*, *Fertilizers*, *Veterinary Drugs*).
+- **FR-POS-1 (Current):** An owner or assigned staff member can submit a non-empty cart for an accessible shop. Products cannot be duplicated within one request.
+- **FR-POS-2 (Current):** Validate prices, quantities, shop membership, total, and payment rules on the server. Cash tender must cover the total; non-cash tender must equal the total. Supported recorded methods include `CASH`, `MPESA`, `CARD`, `BANK_TRANSFER`, and `DEBT`.
+- **FR-POS-3 (Current):** Persist the sale and line-item snapshots, deduct stock, write the relevant cash-ledger or debt record, and audit the action within a database transaction.
+- **FR-POS-4 (Current):** Credit sales require an eligible customer and create linked debt. A customer may also be linked to a non-credit sale for reference.
+- **FR-POS-5 (Current):** Require an idempotency key for checkout so client retries do not duplicate a completed sale.
+- **FR-POS-6 (Current):** Owners and assigned staff can read sales within authorized shop scope. A printable receipt is a frontend concern based on returned sale data.
+- **FR-POS-7 (Planned):** Sale voiding is not part of the current API.
 
-- **FR-PROD-3 (Stock Tracking):**
-  Every sale automatically deducts the sold quantity from the product's current stock. Stock can be manually restocked by the owner.
+### 3.5 Staff
 
-- **FR-PROD-4 (Low Stock Alerts):**
-  Products where `quantity_in_stock <= min_stock_level` trigger a warning badge on the owner dashboard and appear in the Notification Center.
+- **FR-STAFF-1 (Current):** Owners can create and list their staff, approve accounts, toggle activation, assign or remove shop assignments, and delete staff accounts.
+- **FR-STAFF-2 (Current):** Staff must be active and assigned to the requested shop. Deactivation or owner suspension prevents successful staff login.
+- **FR-STAFF-3 (Current):** Only owners can manage staff and shop assignments.
 
-- **FR-PROD-5 (Product Search):**
-  POS screen supports real-time search by product name or category for fast cashier lookup.
+### 3.6 Customers and debts
 
----
+- **FR-CUST-1 (Current):** Owners and assigned staff can create and list customers within an accessible shop. New customers are not credit-eligible by default.
+- **FR-CUST-2 (Current):** Only owners can change credit eligibility or delete a customer. Customer deletion is rejected when debt records still reference the customer; historical sales are anonymized as implemented.
+- **FR-CUST-3 (Current):** An eligible customer can have a debt recorded directly or through a credit sale. A paid sale can also be converted into a debt; the conversion changes the sale payment state and posts the corresponding ledger reversal.
+- **FR-CUST-4 (Current):** Owners and assigned staff can record positive partial or full debt repayments that do not exceed the outstanding balance. Persist repayment, debt balance, account inflow, and audit information atomically.
+- **FR-CUST-5 (Current):** Settled debts are excluded from open-debt views. Debt-specific records are purged after the configured retention interval (currently scheduled with a seven-day retention); repayment cash effects remain in the account ledger without a customer/debt reference.
 
-### 3.4 POS — Sales & Checkout (FR-POS)
+### 3.7 Finance and dashboard
 
-- **FR-POS-1 (Cart Management):**
-  Cashier adds products to a cart (order) with quantity. Cart displays: product name, unit price, quantity, line total, and running grand total.
+- **FR-FIN-1 (Current):** Owners can record and list expenses and expense categories for a shop.
+- **FR-FIN-2 (Current):** Owners can record personal stock withdrawals. Validate and deduct stock, record its cost as a non-cash owner-use expense, and record an audit event atomically.
+- **FR-FIN-3 (Current):** Each shop has a cash ledger supporting sales, repayments, capital, stock purchases, expenses, and drawings. Corrections should use explicit reversing entries rather than silently rewriting history.
+- **FR-FIN-4 (Current):** Owners can review shop account summaries and paginated transactions, add capital, and record drawings. A drawing must not exceed available cash; warn and require explicit confirmation where the application identifies a drawing greater than remaining profit.
+- **FR-FIN-5 (Current):** Present operating profit, profit after drawings, and ledger cash as distinct measures. Debt principal, repayments, capital, stock purchases, and drawings must not be mislabeled as sales revenue or operating expenses.
+- **FR-DASH-1 (Current):** Owners can view the implemented dashboard summary, optionally scoped to a shop. Do not promise unimplemented top-products, shop-comparison, or notification endpoints.
+- **FR-AUD-1 (Current):** Record actor, shop, action, resource, and timestamp for supported financial/security-sensitive mutations.
 
-- **FR-POS-2 (Quantity Validation):**
-  If requested quantity exceeds available stock, the system rejects the line item addition with a clear error. Sale cannot proceed with out-of-stock items.
-  $$\text{Validation: } Q_{\text{requested}} \le Q_{\text{in\_stock}} \implies \text{Allow}$$
+### 3.8 API and user feedback
 
-- **FR-POS-3 (Cash Payment & Change Calculation):**
-  Cashier enters amount tendered by customer. System computes change:
-  $$\text{Change} = \text{Amount Tendered} - \text{Grand Total}$$
+- **FR-API-1 (Current):** Return API results in the common response envelope (`body`, `message`, `success`, `timeStamp`) and provide actionable validation, authentication, authorization, and not-found errors.
+- **FR-API-2 (Current):** Paginate financial/customer collections where the endpoint implements pagination; enforce a maximum page size in the service.
+- **FR-UX-1 (Current):** The frontend must provide clear loading, success, empty, and error feedback for asynchronous operations and must not report success when the API fails.
+- **FR-UX-2 (Current):** Keep public routes usable without a token and protect authenticated routes according to the current user role; the backend remains the security boundary.
 
-- **FR-POS-4 (Sale Completion & Stock Deduction):**
-  On confirmation, system:
-  1. Creates a `Sale` record with timestamp, cashier ID, shop ID, and payment details.
-  2. Creates `SaleItem` records for each line item.
-  3. Deducts sold quantity from each product's stock.
-  4. Returns sale summary for receipt display.
-  Sales may optionally reference a customer for customer purchase history. That reference does not create, settle, or imply a customer debt.
+## 4. Non-functional requirements
 
-- **FR-POS-5 (Receipt Generation):**
-  After successful sale, system displays a printable receipt with: shop name, date/time, itemized list, total, amount paid, change, and cashier name.
+These performance values are **acceptance targets**, not measured results. Record a reproducible baseline and actual results separately in the [Testing and Performance Plan](../testing/TESTING_AND_PERFORMANCE.md).
 
-- **FR-POS-6 (Sale Void — Owner Only):**
-  Owner can void (cancel) a sale within the same business day. Voiding a sale restores stock levels and marks the sale as `VOIDED`.
+### 4.1 Performance
 
----
+- **NFR-PERF-1:** At the 75th percentile of real mobile visits, target Core Web Vitals of LCP ≤ 2.5 seconds, INP ≤ 200 milliseconds, and CLS ≤ 0.1.
+- **NFR-PERF-2:** On a documented staging-like environment and representative seeded dataset, target p95 ≤ 500 ms for common read/write API requests, excluding health checks and large report/export operations.
+- **NFR-PERF-3:** Target p95 ≤ 1 second for a successful sale checkout request under the same test conditions.
+- **NFR-PERF-4:** Measure cold and warm page load, JavaScript/CSS transfer size, API latency, and checkout latency. State device, network, dataset, concurrency, and cache conditions with each result.
 
-### 3.5 Inventory & Stock Management (FR-INV)
+### 4.2 Security and privacy
 
-- **FR-INV-1 (Manual Restock):**
-  Owner can restock a product by entering the quantity received. System increments `quantity_in_stock` accordingly and logs the restock event with date and quantity.
+- **NFR-SEC-1:** Hash passwords with BCrypt; never return password hashes in API responses.
+- **NFR-SEC-2:** Sign bearer tokens with a server-only secret of at least 32 UTF-8 bytes and enforce token expiry.
+- **NFR-SEC-3:** Require authentication by default except for explicitly public authentication/setup and health routes. Enforce roles and shop scope server-side.
+- **NFR-SEC-4:** In production, use HTTPS, exact configured CORS origins, verified database TLS, non-root database credentials, and production configuration that does not automatically alter the schema.
+- **NFR-SEC-5:** Keep JWT/setup/database credentials out of source control, frontend bundles, and logs. Secure browser token storage against XSS as a continuing hardening concern.
+- **NFR-PRIV-1:** Collect only the account, shop, staff, customer, sales, and financial data needed for operations. Restrict access by role and shop.
+- **NFR-PRIV-2:** Keep retention/deletion behavior transparent. Debt-specific records have the current seven-day post-settlement retention; other records follow the database backup and retention policy selected by the operator.
 
-- **FR-INV-2 (Restock History):**
-  Each product maintains a log of all restock events (date, quantity added, notes).
+### 4.3 Reliability and data integrity
 
-- **FR-INV-3 (Low Stock Dashboard Alert):**
-  Owner dashboard displays a live count of products at or below minimum stock level with a direct link to the product list filtered by low stock.
+- **NFR-REL-1:** A checkout or financial mutation must either commit all related records or none.
+- **NFR-REL-2:** Use idempotency protection on supported high-impact mutations and validate balances, prices, and stock on the server.
+- **NFR-REL-3:** Production schema changes must use reviewed, versioned migrations before deployment; `ddl-auto=update` is not a production migration strategy.
+- **NFR-REL-4:** Provide health and readiness/liveness signals and maintain tested, encrypted database backups before public launch.
 
----
+### 4.4 Accessibility and compatibility
 
-### 3.6 Staff Management (FR-STAFF)
+- **NFR-UX-1:** The interface should be responsive for mobile and desktop widths and avoid horizontal overflow in primary workflows.
+- **NFR-UX-2:** Target WCAG 2.2 AA for semantic structure, keyboard access, visible focus, contrast, and form feedback; a full accessibility audit remains to be recorded.
 
-- **FR-STAFF-1 (Cashier Approval):**
-  Owner approves pending cashier registrations and assigns them to specific shops.
+## 5. Acceptance and traceability
 
-- **FR-STAFF-2 (Cashier Deactivation):**
-  Owner can deactivate a cashier account. Deactivated cashiers cannot log in.
+Requirements are accepted through API/controller and service tests, frontend workflow checks, and staging validation. Performance acceptance uses the methodology and results table in the testing/performance plan. A feature described as planned is not accepted until its API/UI behavior, tests, security controls, and operational requirements are documented and implemented.
 
-- **FR-STAFF-3 (Cashier-Shop Assignment):**
-  Each cashier is linked to one or more shops. They can only process sales in assigned shops.
+## 6. Related documentation
 
----
-
-### 3.7 Owner Sales Dashboard & Reports (FR-DASH)
-
-- **FR-DASH-1 (Summary KPIs):**
-  Owner dashboard displays:
-  - Total Sales Today (count and revenue)
-  - Total Revenue This Month
-  - Total Products in All Shops
-  - Low Stock Alert Count
-
-- **FR-DASH-2 (Sales by Shop):**
-  Revenue breakdown per shop — useful for multi-shop owners comparing performance.
-
-- **FR-DASH-3 (Top Selling Products):**
-  Ranked list of top 5 products by revenue and by quantity sold for the current month.
-
-- **FR-DASH-4 (Recent Transactions Feed):**
-  Server-side paginated list of recent sales across all shops, with sale ID, shop, cashier, total, and timestamp.
-
-- **FR-DASH-5 (Sales History & Filtering):**
-  Owner can filter sales by: date range, shop, cashier, and payment status. Results are paginated.
-
----
-
-### 3.8 Notification Center (FR-NOTIF)
-
-- **FR-NOTIF-1 (Proactive Monitoring):**
-  System continuously monitors:
-  1. `STAFF`: Pending cashier approval requests.
-  2. `STOCK`: Products at or below minimum stock level.
-
-- **FR-NOTIF-2 (TopBar Bell):**
-  Animated bell icon with live badge count, category filters (`All`, `Staff`, `Stock`), and links to resolve each alert. Polls every 45 seconds and on route transitions.
-
-### 3.9 Customers & Independent Debts (FR-CUST)
-
-- **FR-CUST-1 (Customer Records):** Maintain customer name and optional contact information per shop. Sales may optionally reference a customer so purchase history can be reviewed for future credit-eligibility decisions.
-- **FR-CUST-2 (Eligibility Control):** New customers are not credit-eligible by default. An owner can explicitly mark a customer eligible; the customer record shows prior linked sales. Eligibility criteria remain owner policy and are not automatically inferred by the system.
-- **FR-CUST-3 (Independent Debt):** An owner or cashier may record a debt only for an eligible customer. A debt references its customer, and its shop is determined through that customer; it also records principal, date, optional due date, description, creator, and status. It is never linked to a sale and does not alter sale totals, revenue, stock, or profit.
-- **FR-CUST-4 (Repayments):** An owner or cashier can record a positive partial or full repayment. A transaction atomically validates that cumulative payments do not exceed the outstanding balance, updates the balance, records the attendant and timestamp, and records a shop-account cash inflow. Unpaid balance is principal less repayments.
-- **FR-CUST-5 (Settled Debt Retention):** Fully paid debts leave active debt views immediately. Debt and repayment details, customer references held solely by those records, and debt-specific audit events are permanently deleted seven days after full repayment. Before purge, creator, repayment attendants, changes, and timestamps are retained for accountability. After purge, the system makes no claim to retain debt-specific evidence. Shop-account cash totals remain reconciled; repayment entries are retained only as unlinked cash-account transactions without a customer/debt reference.
-- **FR-CUST-6 (Customer Deletion):** A customer may be deleted only when no debt records reference them. Deletion anonymizes their historical sales by clearing customer identifiers/contact details while preserving financial sale records. Deleting a customer does not delete other financial records.
-
-### 3.10 Expenses, Inventory Withdrawals & Shop Accounts (FR-FIN)
-
-- **FR-FIN-1 (Operating Expenses):** Owners can record dated shop expenses with a configurable category, positive amount, payment method/account, payee or recipient, notes, and the authenticated staff member who recorded the payment. Expenses reduce shop cash and operating net profit.
-- **FR-FIN-2 (Personal Stock Use):** Owners can authorize a stock withdrawal with product, positive quantity, reason, timestamp, and actor. The operation atomically reduces stock without allowing negative inventory, snapshots the inventory cost, records the cost as a non-cash owner-use expense, and writes an audit event.
-- **FR-FIN-3 (Shop Account Ledger):** Each shop has a separate account ledger. It records an owner-entered opening balance/capital, paid sale proceeds, debt repayments, capital additions, supplier stock-purchase outflows, operating-expense outflows, and owner drawings. Unpaid debts are not account inflows. The ledger is append-only; corrections are reversing entries with actor and reason.
-- **FR-FIN-4 (Owner Drawings):** An owner can record a drawing from available shop cash. Drawings reduce the account balance and a separate remaining-profit-after-drawings figure, but do not alter operating net profit or count as an expense. If a drawing exceeds remaining profit, warn the owner and require explicit confirmation; do not allow a drawing to exceed available account cash.
-- **FR-FIN-5 (Profit & Cash Separation):** Operating net profit is sales gross profit (revenue less sale-time cost of goods sold) less operating expenses, including personal stock use. Debt principal and repayments, capital, stock purchases, and owner drawings are not operating revenue/expenses. Show operating net profit, remaining profit after drawings, and account cash separately; do not label accounting profit as cash available.
-- **FR-FIN-6 (Inventory Purchases):** A stock purchase records quantity and actual purchase cost, increases inventory and records a shop-account outflow in one transaction. Existing restock operations that do not record purchase cost are not used to assert a complete cash balance; they must be distinguished as quantity-only adjustments.
-- **FR-FIN-7 (Navigation & Reporting):** Customer/debt, expenses/withdrawals, and shop-account workflows are separate owner-menu destinations and are not added to the main dashboard. Their own views provide balances, transaction history, filters, and shop-scoped summaries.
-
-### 3.11 Financial Audit & Authorization (FR-AUD)
-
-- **FR-AUD-1 (Temporary Actor Identity):** Until security hardening, protected API operations resolve the actor from the `X-User-Id` header and the database. This is for development compatibility only and is not verified authentication.
-- **FR-AUD-2 (Role & Tenant Checks):** Financial operations check the resolved user's role, shop ownership/assignment, and resource scope in the backend. UI route guards are supplementary only; header-based identity is not a security boundary.
-- **FR-AUD-3 (Actor Accountability):** Record the resolved actor and timestamp for every create, repayment, adjustment, reversal, deletion, and authorization change. Audit events are append-only except debt-specific records explicitly purged by FR-CUST-5.
-- **FR-AUD-4 (Input Integrity):** Amounts and quantities must be positive, money uses fixed decimal precision, and cumulative repayments, stock, and account balances are validated transactionally. Repeated/duplicate submissions must not double-post financial or stock movements.
-
----
-
-## 4. Non-Functional Requirements (NFR)
-
-### 4.1 Performance (NFR-PERF)
-- **NFR-PERF-1:** API response time under 100ms for 95th percentile under normal load.
-- **NFR-PERF-2:** POS checkout completes and returns receipt data in under 500ms.
-- **NFR-PERF-3:** Frontend Vite bundle optimized with tree-shaking, sub-3-second initial load.
-
-### 4.2 Security (NFR-SEC)
-- **NFR-SEC-1:** Passwords hashed with BCrypt (strength 10).
-- **NFR-SEC-2:** Signed, expiring bearer authentication is deferred to the security-hardening phase. The temporary `X-User-Id` mechanism is development-only and must not be treated as secure.
-- **NFR-SEC-3:** Financial permissions and shop tenancy are enforced by the API, with UI route guards as a secondary control.
-- **NFR-SEC-4:** `@JsonIgnore` on all bidirectional JPA relationships to prevent circular serialization.
-- **NFR-SEC-5:** Financial state changes are atomic, append-only where practical, and auditable by the database-resolved actor. Actor identity remains forgeable until authentication hardening is implemented.
-
-### 4.3 Reliability (NFR-REL)
-- **NFR-REL-1:** Stock deduction and sale recording are executed in a single database transaction — no partial sales.
-- **NFR-REL-2:** Automatic DDL update with zero destructive schema mutations.
-- **NFR-REL-3:** Global exception handler returns uniform JSON error responses.
-- **NFR-REL-4:** Scheduled settled-debt purging is idempotent, bounded, and does not modify independent shop cash-account totals.
-
-### 4.4 Scalability (NFR-SCALE)
-- **NFR-SCALE-1:** Multi-tenant data model — all entities are scoped to `shop_id` and `owner_id`, directly or through their owning relationship.
-- **NFR-SCALE-2:** Adding new shop types or plan tiers requires no schema changes — only configuration.
-- **NFR-SCALE-3:** Financial records are shop-scoped, indexed by shop/date/status, and exposed through paginated/filterable APIs rather than unbounded collection reads.
+- [System Architecture](System_Design_and_Architecture.md)
+- [API Reference](../api/API_REFERENCE.md)
+- [Security and Data Handling](../security/SECURITY_AND_DATA_HANDLING.md)
+- [Testing and Performance Plan](../testing/TESTING_AND_PERFORMANCE.md)
+- [Production Setup](../deployment/production-setup.md)

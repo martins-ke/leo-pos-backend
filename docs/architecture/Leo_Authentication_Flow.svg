@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1800 1460" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
+  <title id="title">Leo Authentication Flows</title>
+  <desc id="description">Current owner registration, login and one-time platform-owner setup flows, including validation and token return.</desc>
+  <defs>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#172033}
+      .title{font-size:30px;font-weight:700;fill:#fff}
+      .subtitle{font-size:14px;fill:#cbd5e1}
+      .laneTitle{font-size:18px;font-weight:700;fill:#203b6a}
+      .lane{fill:#f4f7fc;stroke:#d9e3f0;stroke-width:1.5}
+      .step{fill:#fff;stroke:#ccd8e7;stroke-width:1.5}
+      .decision{fill:#fff8e8;stroke:#d6a84d;stroke-width:1.5}
+      .error{fill:#fff0f0;stroke:#e49a9a;stroke-width:1.5}
+      .success{fill:#eaf8f1;stroke:#78bb98;stroke-width:1.5}
+      .label{font-size:13px;font-weight:700}
+      .detail{font-size:12px;fill:#526176}
+      .arrow{fill:none;stroke:#57708e;stroke-width:2}
+      .branch{font-size:11px;font-weight:700;fill:#8a5b11}
+      .foot{font-size:12px;fill:#475569}
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#57708e"/>
+    </marker>
+  </defs>
+  <rect width="1800" height="1460" fill="#f6f8fc"/>
+  <rect width="1800" height="105" fill="#162844"/>
+  <text class="title" x="48" y="52">Leo | Authentication flows</text>
+  <text class="subtitle" x="48" y="79">Current backend behavior · POST /auth/register · POST /auth/login · one-time POST /auth/setup</text>
+
+  <rect class="lane" x="48" y="135" width="830" height="1060" rx="16"/>
+  <rect class="lane" x="922" y="135" width="830" height="1060" rx="16"/>
+  <text class="laneTitle" x="78" y="175">A. Shop owner registration</text>
+  <text class="laneTitle" x="952" y="175">B. Login</text>
+
+  <!-- Registration path -->
+  <rect class="step" x="278" y="205" width="370" height="82" rx="12"/>
+  <text class="label" x="463" y="235" text-anchor="middle">Owner submits registration</text>
+  <text class="detail" x="463" y="257" text-anchor="middle">username, email, password + business details</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M463 287 V316"/>
+
+  <polygon class="decision" points="463,316 583,366 463,416 343,366"/>
+  <text class="label" x="463" y="362" text-anchor="middle">Email already exists?</text>
+  <text class="detail" x="463" y="380" text-anchor="middle">Email is optional</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M343 366 H172 V452"/>
+  <text class="branch" x="284" y="354">YES</text>
+  <rect class="error" x="78" y="452" width="190" height="76" rx="10"/>
+  <text class="label" x="173" y="482" text-anchor="middle">400 · reject</text>
+  <text class="detail" x="173" y="503" text-anchor="middle">Email must be unique</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M463 416 V452"/>
+  <text class="branch" x="474" y="440">NO</text>
+
+  <polygon class="decision" points="463,452 583,502 463,552 343,502"/>
+  <text class="label" x="463" y="499" text-anchor="middle">Passwords match?</text>
+  <text class="detail" x="463" y="517" text-anchor="middle">Compare confirmation</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M343 502 H172 V568"/>
+  <text class="branch" x="284" y="490">NO</text>
+  <rect class="error" x="78" y="568" width="190" height="76" rx="10"/>
+  <text class="label" x="173" y="598" text-anchor="middle">400 · reject</text>
+  <text class="detail" x="173" y="619" text-anchor="middle">Password mismatch</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M463 552 V584"/>
+  <text class="branch" x="474" y="574">YES</text>
+
+  <rect class="step" x="278" y="584" width="370" height="82" rx="12"/>
+  <text class="label" x="463" y="614" text-anchor="middle">Create ACTIVE OWNER</text>
+  <text class="detail" x="463" y="636" text-anchor="middle">Hash password with BCrypt; save user</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M463 666 V695"/>
+  <rect class="step" x="278" y="695" width="370" height="90" rx="12"/>
+  <text class="label" x="463" y="726" text-anchor="middle">Provision initial shop + ledger</text>
+  <text class="detail" x="463" y="748" text-anchor="middle">Default shop and ShopAccount in transaction</text>
+  <text class="detail" x="463" y="766" text-anchor="middle">Shop name is adjusted if already taken</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M463 785 V814"/>
+  <rect class="success" x="278" y="814" width="370" height="90" rx="12"/>
+  <text class="label" x="463" y="845" text-anchor="middle">Return 201 · AuthResponse</text>
+  <text class="detail" x="463" y="867" text-anchor="middle">User + signed JWT to browser</text>
+  <text class="detail" x="463" y="885" text-anchor="middle">Frontend persists session in localStorage</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M463 904 V933"/>
+  <rect class="step" x="278" y="933" width="370" height="82" rx="12"/>
+  <text class="label" x="463" y="963" text-anchor="middle">Authenticated API requests</text>
+  <text class="detail" x="463" y="985" text-anchor="middle">Authorization: Bearer JWT</text>
+
+  <!-- Login path -->
+  <rect class="step" x="1152" y="205" width="370" height="82" rx="12"/>
+  <text class="label" x="1337" y="235" text-anchor="middle">User submits login</text>
+  <text class="detail" x="1337" y="257" text-anchor="middle">Username or email + password</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1337 287 V316"/>
+  <rect class="step" x="1152" y="316" width="370" height="82" rx="12"/>
+  <text class="label" x="1337" y="346" text-anchor="middle">Find account</text>
+  <text class="detail" x="1337" y="368" text-anchor="middle">Try username, then email</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1337 398 V427"/>
+  <polygon class="decision" points="1337,427 1457,477 1337,527 1217,477"/>
+  <text class="label" x="1337" y="473" text-anchor="middle">Account + password</text>
+  <text class="detail" x="1337" y="491" text-anchor="middle">valid?</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1457 477 H1627 V548"/>
+  <text class="branch" x="1530" y="465">NO</text>
+  <rect class="error" x="1532" y="548" width="190" height="76" rx="10"/>
+  <text class="label" x="1627" y="578" text-anchor="middle">400 · reject</text>
+  <text class="detail" x="1627" y="599" text-anchor="middle">Generic credentials error</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1337 527 V558"/>
+  <text class="branch" x="1348" y="549">YES</text>
+  <polygon class="decision" points="1337,558 1457,608 1337,658 1217,608"/>
+  <text class="label" x="1337" y="604" text-anchor="middle">Account active?</text>
+  <text class="detail" x="1337" y="622" text-anchor="middle">STAFF owner also active</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1217 608 H1052 V679"/>
+  <text class="branch" x="1120" y="596">NO</text>
+  <rect class="error" x="958" y="679" width="190" height="80" rx="10"/>
+  <text class="label" x="1053" y="709" text-anchor="middle">403 · reject</text>
+  <text class="detail" x="1053" y="730" text-anchor="middle">Pending / deactivated /</text>
+  <text class="detail" x="1053" y="748" text-anchor="middle">shop owner suspended</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1337 658 V690"/>
+  <text class="branch" x="1348" y="680">YES</text>
+  <rect class="step" x="1152" y="690" width="370" height="82" rx="12"/>
+  <text class="label" x="1337" y="720" text-anchor="middle">Issue signed, expiring JWT</text>
+  <text class="detail" x="1337" y="742" text-anchor="middle">JWT subject is the user ID</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1337 772 V801"/>
+  <rect class="success" x="1152" y="801" width="370" height="90" rx="12"/>
+  <text class="label" x="1337" y="832" text-anchor="middle">Return 200 · AuthResponse</text>
+  <text class="detail" x="1337" y="854" text-anchor="middle">User + JWT to browser</text>
+  <text class="detail" x="1337" y="872" text-anchor="middle">Frontend persists session in localStorage</text>
+  <path class="arrow" marker-end="url(#arrow)" d="M1337 891 V920"/>
+  <rect class="step" x="1152" y="920" width="370" height="82" rx="12"/>
+  <text class="label" x="1337" y="950" text-anchor="middle">Protected request</text>
+  <text class="detail" x="1337" y="972" text-anchor="middle">API verifies token and reloads active user</text>
+
+  <rect x="78" y="1050" width="1644" height="105" rx="12" fill="#fff" stroke="#d9e3f0"/>
+  <text class="label" x="100" y="1080">One-time platform-owner setup · POST /auth/setup</text>
+  <text class="detail" x="100" y="1105">Checks setup key, or development profile + loopback address; rejects if a SUPER_ADMIN already exists; validates unique username/email and confirmation.</text>
+  <text class="detail" x="100" y="1128">Creates ACTIVE SUPER_ADMIN and returns user + JWT. It does not create a shop or ShopAccount.</text>
+  <text class="foot" x="78" y="1225">Model notes: usernames are globally unique (database constraint); public registration checks duplicate email but does not pre-check username in the service.</text>
+  <text class="foot" x="78" y="1248">Successful registration creates the first shop and ledger transactionally. Login rejects invalid credentials, pending/inactive accounts, and staff whose owner is not active.</text>
+  <text class="foot" x="78" y="1271">A valid token is not a server-side session; protected requests also require a currently active account and pass role/shop-scope authorization.</text>
+</svg>

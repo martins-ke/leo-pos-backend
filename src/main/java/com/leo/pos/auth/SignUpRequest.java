@@ -10,5 +10,7 @@ public record SignUpRequest(
 		String password, 
 		@NotBlank(message = "Confirm password is required!")
 		String confirm_password,
-		String role) {  
-}
+		String businessName,
+		String businessLocation,
+		String businessType
+) {}

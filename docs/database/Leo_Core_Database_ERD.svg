@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1800 1320" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
+  <title id="title">Leo Core Database Entity Relationship Diagram</title>
+  <desc id="description">Current JPA entities for users, shops, products, sales, customers, debts and debt payments, with enforced foreign keys distinguished from a logical sale-to-debt reference.</desc>
+  <defs>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#172033}
+      .title{font-size:30px;font-weight:700;fill:#fff}
+      .subtitle{font-size:14px;fill:#cbd5e1}
+      .section{font-size:12px;font-weight:700;letter-spacing:1.6px;fill:#64748b}
+      .card{fill:#fff;stroke:#dbe3ee;stroke-width:1.5}
+      .head{fill:#eef3ff}
+      .entity{font-size:15px;font-weight:700;fill:#243b6b}
+      .field{font-size:12px;fill:#334155}
+      .key{font-weight:700;fill:#0f766e}
+      .line{fill:none;stroke:#54708f;stroke-width:2}
+      .logical{fill:none;stroke:#a36c19;stroke-width:2;stroke-dasharray:7 6}
+      .label{font-size:11px;font-weight:600;fill:#475569}
+      .legend{font-size:12px;fill:#475569}
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#54708f"/>
+    </marker>
+    <marker id="logicalArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#a36c19"/>
+    </marker>
+  </defs>
+  <rect width="1800" height="1320" fill="#f6f8fc"/>
+  <rect width="1800" height="105" fill="#162844"/>
+  <text class="title" x="48" y="52">Leo | Core database ERD</text>
+  <text class="subtitle" x="48" y="79">Current persistence model · generated from the JPA entities · not a proposed schema</text>
+
+  <text class="section" x="48" y="145">IDENTITY &amp; SHOP ACCESS</text>
+  <text class="section" x="48" y="485">CATALOGUE &amp; SALES</text>
+  <text class="section" x="48" y="930">CUSTOMERS &amp; CREDIT</text>
+
+  <!-- Relationships are behind the entity cards. -->
+  <path class="line" marker-end="url(#arrow)" d="M830 310 V380"/>
+  <text class="label" x="842" y="350">owner_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M600 437 H510"/>
+  <text class="label" x="520" y="425">user_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M600 470 H510"/>
+  <text class="label" x="520" y="488">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M730 560 V645 H270 V690"/>
+  <text class="label" x="430" y="632">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M830 560 V690"/>
+  <text class="label" x="842" y="630">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M960 520 H1325 V690"/>
+  <text class="label" x="1140" y="507">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M960 285 H1080 V665 H850 V690"/>
+  <text class="label" x="1092" y="310">cashier_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1000 790 H1250"/>
+  <text class="label" x="1080" y="778">customer_id · optional</text>
+  <path class="line" marker-end="url(#arrow)" d="M830 850 V975"/>
+  <text class="label" x="842" y="918">sale_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M400 775 H575 V1015 H700"/>
+  <text class="label" x="462" y="763">product_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1455 850 V980"/>
+  <text class="label" x="1467" y="918">customer_id</text>
+  <path class="logical" marker-end="url(#logicalArrow)" d="M960 815 H1060 V1070 H1325"/>
+  <text class="label" x="1080" y="803">sale_id · optional, unique scalar</text>
+  <path class="line" marker-end="url(#arrow)" d="M1455 1160 V1190"/>
+  <text class="label" x="1467" y="1180">debt_id</text>
+
+  <!-- Entity cards -->
+  <g transform="translate(700 160)">
+    <rect class="card" width="260" height="150" rx="10"/>
+    <path class="head" d="M10 0 H250 Q260 0 260 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">USERS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">UK  username, email</text>
+    <text class="field" x="16" y="106">role · status · created_by</text>
+    <text class="field" x="16" y="128">created_at</text>
+  </g>
+  <g transform="translate(600 380)">
+    <rect class="card" width="360" height="180" rx="10"/>
+    <path class="head" d="M10 0 H350 Q360 0 360 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">SHOPS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  owner_id → users.id</text>
+    <text class="field" x="16" y="106">name · type · location</text>
+    <text class="field" x="16" y="128">description · date_created</text>
+    <text class="field" x="16" y="150">shop owner relationship</text>
+  </g>
+  <g transform="translate(250 380)">
+    <rect class="card" width="260" height="120" rx="10"/>
+    <path class="head" d="M10 0 H250 Q260 0 260 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">USER_SHOPS</text>
+    <text class="field key" x="16" y="62">PK/FK  user_id</text>
+    <text class="field key" x="16" y="84">PK/FK  shop_id</text>
+    <text class="field" x="16" y="106">Many-to-many staff assignment</text>
+  </g>
+
+  <g transform="translate(140 690)">
+    <rect class="card" width="260" height="160" rx="10"/>
+    <path class="head" d="M10 0 H250 Q260 0 260 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">PRODUCTS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  shop_id → shops.id</text>
+    <text class="field" x="16" y="106">name · buying_price</text>
+    <text class="field" x="16" y="128">selling_price · quantity</text>
+    <text class="field" x="16" y="150">active</text>
+  </g>
+  <g transform="translate(700 690)">
+    <rect class="card" width="300" height="160" rx="10"/>
+    <path class="head" d="M10 0 H290 Q300 0 300 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">SALES</text>
+    <text class="field key" x="16" y="62">PK  id · UK receipt_number</text>
+    <text class="field key" x="16" y="84">FK  shop_id → shops.id</text>
+    <text class="field key" x="16" y="106">FK  cashier_id → users.id</text>
+    <text class="field key" x="16" y="128">FK  customer_id → customers.id (optional)</text>
+    <text class="field" x="16" y="150">grand_total · payment_method · created_at</text>
+  </g>
+  <g transform="translate(1250 690)">
+    <rect class="card" width="300" height="160" rx="10"/>
+    <path class="head" d="M10 0 H290 Q300 0 300 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">CUSTOMERS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  shop_id → shops.id</text>
+    <text class="field" x="16" y="106">name · contact</text>
+    <text class="field" x="16" y="128">credit_eligible · created_at</text>
+    <text class="field" x="16" y="150">per-shop customer record</text>
+  </g>
+  <g transform="translate(700 975)">
+    <rect class="card" width="300" height="185" rx="10"/>
+    <path class="head" d="M10 0 H290 Q300 0 300 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">SALE_ITEMS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  sale_id → sales.id</text>
+    <text class="field key" x="16" y="106">FK  product_id → products.id</text>
+    <text class="field" x="16" y="128">product_name snapshot · quantity</text>
+    <text class="field" x="16" y="150">unit_price · subtotal · unit_cost</text>
+    <text class="field" x="16" y="172">Historical pricing/cost snapshot</text>
+  </g>
+  <g transform="translate(1300 980)">
+    <rect class="card" width="310" height="180" rx="10"/>
+    <path class="head" d="M10 0 H300 Q310 0 310 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">DEBTS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  customer_id → customers.id</text>
+    <text class="field key" x="16" y="106">UK  sale_id (optional scalar reference)</text>
+    <text class="field" x="16" y="128">amount · outstanding_amount</text>
+    <text class="field" x="16" y="150">status · purge_at</text>
+    <text class="field" x="16" y="172">Sale reference is not a JPA FK</text>
+  </g>
+  <g transform="translate(1300 1190)">
+    <rect class="card" width="310" height="105" rx="10"/>
+    <path class="head" d="M10 0 H300 Q310 0 310 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">DEBT_PAYMENTS</text>
+    <text class="field key" x="16" y="62">PK  id · FK debt_id → debts.id</text>
+    <text class="field" x="16" y="84">amount · received_at · received_by_id</text>
+  </g>
+
+  <rect x="48" y="1245" width="18" height="3" fill="#54708f"/>
+  <text class="legend" x="76" y="1251">Solid line = mapped foreign-key relationship</text>
+  <path d="M390 1247 H430" class="logical"/>
+  <text class="legend" x="440" y="1251">Dashed line = scalar/logical reference; not a mapped FK</text>
+  <text class="legend" x="48" y="1280">PK primary key · FK foreign key · UK unique constraint. Cardinality follows the foreign-key owner; optional references are labeled.</text>
+</svg>

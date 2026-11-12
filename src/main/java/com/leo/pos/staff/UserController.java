@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,7 +18,6 @@ import com.leo.pos.ApiResponse;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"}, originPatterns = "*")
 @RestController
 @RequestMapping("/staff")
 @PreAuthorize("hasRole('OWNER')")

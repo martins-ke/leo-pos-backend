@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1800 1290" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
+  <title id="title">Leo Finance and Support Database ERD</title>
+  <desc id="description">Current finance, inventory movement, audit and idempotency entities. Solid lines show mapped foreign keys; dashed references are scalar and not enforced as foreign keys.</desc>
+  <defs>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#172033}
+      .title{font-size:30px;font-weight:700;fill:#fff}
+      .subtitle{font-size:14px;fill:#cbd5e1}
+      .section{font-size:12px;font-weight:700;letter-spacing:1.6px;fill:#64748b}
+      .card{fill:#fff;stroke:#dbe3ee;stroke-width:1.5}
+      .head{fill:#e9f7f3}
+      .entity{font-size:15px;font-weight:700;fill:#17644f}
+      .field{font-size:12px;fill:#334155}
+      .key{font-weight:700;fill:#0f766e}
+      .line{fill:none;stroke:#54708f;stroke-width:2}
+      .logical{fill:none;stroke:#a36c19;stroke-width:2;stroke-dasharray:7 6}
+      .label{font-size:11px;font-weight:600;fill:#475569}
+      .legend{font-size:12px;fill:#475569}
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#54708f"/>
+    </marker>
+    <marker id="logicalArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#a36c19"/>
+    </marker>
+  </defs>
+  <rect width="1800" height="1290" fill="#f6f8fc"/>
+  <rect width="1800" height="105" fill="#162844"/>
+  <text class="title" x="48" y="52">Leo | Finance &amp; support database ERD</text>
+  <text class="subtitle" x="48" y="79">Current finance, stock movement, audit and request-idempotency entities</text>
+  <text class="section" x="48" y="145">SHOP ACCOUNT &amp; FINANCIAL ACTIVITY</text>
+  <text class="section" x="48" y="625">INVENTORY MOVEMENTS</text>
+  <text class="section" x="48" y="1015">AUDIT &amp; REQUEST RETRIES</text>
+
+  <!-- Relationships -->
+  <path class="line" marker-end="url(#arrow)" d="M1355 390 V350 H420 V335"/>
+  <text class="label" x="850" y="323">shop_id · one-to-one</text>
+  <path class="line" marker-end="url(#arrow)" d="M580 280 H730"/>
+  <text class="label" x="600" y="268">account_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1180 410 H900 V375 H305 V390"/>
+  <text class="label" x="920" y="398">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1180 445 H940 V375 H695 V390"/>
+  <text class="label" x="955" y="433">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1180 465 H1100 V620 H305 V650"/>
+  <text class="label" x="900" y="608">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1180 475 H1120 V635 H695 V650"/>
+  <text class="label" x="900" y="632">shop_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1355 890 V860 H305 V835"/>
+  <text class="label" x="910" y="848">product_id</text>
+  <path class="line" marker-end="url(#arrow)" d="M1400 890 V875 H695 V835"/>
+  <text class="label" x="940" y="863">product_id</text>
+  <path class="logical" marker-end="url(#logicalArrow)" d="M1180 480 H1130 V1005 H600 V1100"/>
+  <text class="label" x="900" y="993">shop_id · scalar</text>
+
+  <!-- Context entity cards -->
+  <g transform="translate(200 160)">
+    <rect class="card" width="380" height="175" rx="10"/>
+    <path class="head" d="M10 0 H370 Q380 0 380 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">SHOP_ACCOUNTS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">UK/FK  shop_id → shops.id</text>
+    <text class="field" x="16" y="106">balance · currency · opened_at</text>
+    <text class="field" x="16" y="128">One ledger account per shop</text>
+    <text class="field" x="16" y="150">Balance is maintained by ledger operations</text>
+  </g>
+  <g transform="translate(730 160)">
+    <rect class="card" width="370" height="175" rx="10"/>
+    <path class="head" d="M10 0 H360 Q370 0 370 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">ACCOUNT_TRANSACTIONS</text>
+    <text class="field key" x="16" y="62">PK  id · FK account_id</text>
+    <text class="field" x="16" y="84">direction · amount · payment_method</text>
+    <text class="field" x="16" y="106">description · occurred_at</text>
+    <text class="field" x="16" y="128">reference_type · reference_id</text>
+    <text class="field" x="16" y="150">Reference is polymorphic, not an FK</text>
+  </g>
+  <g transform="translate(130 390)">
+    <rect class="card" width="350" height="175" rx="10"/>
+    <path class="head" d="M10 0 H340 Q350 0 350 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">EXPENSES</text>
+    <text class="field key" x="16" y="62">PK  id · FK shop_id → shops.id</text>
+    <text class="field" x="16" y="84">category (text) · amount · date</text>
+    <text class="field" x="16" y="106">payee · payment_method · cash_expense</text>
+    <text class="field" x="16" y="128">linked_resource_type · linked_resource_id</text>
+    <text class="field" x="16" y="150">paid_by_id/name are snapshots, not FKs</text>
+  </g>
+  <g transform="translate(520 390)">
+    <rect class="card" width="350" height="175" rx="10"/>
+    <path class="head" d="M10 0 H340 Q350 0 350 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">EXPENSE_CATEGORIES</text>
+    <text class="field key" x="16" y="62">PK  id · FK shop_id → shops.id</text>
+    <text class="field" x="16" y="84">name</text>
+    <text class="field key" x="16" y="106">UK  (shop_id, name)</text>
+    <text class="field" x="16" y="128">Expense.category is text; no FK</text>
+    <text class="field" x="16" y="150">Categories are unique within each shop</text>
+  </g>
+  <g transform="translate(130 650)">
+    <rect class="card" width="350" height="185" rx="10"/>
+    <path class="head" d="M10 0 H340 Q350 0 350 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">STOCK_PURCHASES</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  shop_id → shops.id</text>
+    <text class="field key" x="16" y="106">FK  product_id → products.id</text>
+    <text class="field" x="16" y="128">quantity · unit_cost · total_cost</text>
+    <text class="field" x="16" y="150">actor_id/name · occurred_at</text>
+    <text class="field" x="16" y="172">Actor is stored as a scalar snapshot</text>
+  </g>
+  <g transform="translate(520 650)">
+    <rect class="card" width="350" height="185" rx="10"/>
+    <path class="head" d="M10 0 H340 Q350 0 350 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">STOCK_WITHDRAWALS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field key" x="16" y="84">FK  shop_id → shops.id</text>
+    <text class="field key" x="16" y="106">FK  product_id → products.id</text>
+    <text class="field" x="16" y="128">quantity · unit_cost · total_cost</text>
+    <text class="field" x="16" y="150">reason · actor_id/name · occurred_at</text>
+    <text class="field" x="16" y="172">Actor is stored as a scalar snapshot</text>
+  </g>
+  <g transform="translate(1180 390)">
+    <rect class="card" width="350" height="95" rx="10"/>
+    <path class="head" d="M10 0 H340 Q350 0 350 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">SHOPS (context)</text>
+    <text class="field key" x="16" y="62">PK id</text>
+    <text class="field" x="115" y="62">Referenced by mapped shop_id fields</text>
+    <text class="field" x="16" y="82">External context entity; see Core Database ERD</text>
+  </g>
+  <g transform="translate(1180 890)">
+    <rect class="card" width="350" height="95" rx="10"/>
+    <path class="head" d="M10 0 H340 Q350 0 350 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">PRODUCTS (context)</text>
+    <text class="field key" x="16" y="62">PK id</text>
+    <text class="field" x="115" y="62">Referenced by stock movement product_id</text>
+    <text class="field" x="16" y="82">External context entity; see Core Database ERD</text>
+  </g>
+  <g transform="translate(130 1035)">
+    <rect class="card" width="470" height="175" rx="10"/>
+    <path class="head" d="M10 0 H460 Q470 0 470 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">AUDIT_EVENTS</text>
+    <text class="field key" x="16" y="62">PK  id</text>
+    <text class="field" x="16" y="84">shop_id · actor_id/name · action</text>
+    <text class="field" x="16" y="106">resource_type · resource_id · details</text>
+    <text class="field" x="16" y="128">occurred_at</text>
+    <text class="field" x="16" y="150">Shop, actor and resource IDs are scalar fields</text>
+  </g>
+  <g transform="translate(1180 1035)">
+    <rect class="card" width="470" height="175" rx="10"/>
+    <path class="head" d="M10 0 H460 Q470 0 470 10 V39 H0 V10 Q0 0 10 0Z"/>
+    <text class="entity" x="16" y="26">IDEMPOTENCY_RECORDS</text>
+    <text class="field key" x="16" y="62">PK  id (request key)</text>
+    <text class="field" x="16" y="84">actor_id · operation · fingerprint</text>
+    <text class="field" x="16" y="106">result_id · created_at</text>
+    <text class="field" x="16" y="128">Actor and result IDs are scalar references</text>
+    <text class="field" x="16" y="150">No mapped FK to users or business records</text>
+  </g>
+
+  <rect x="48" y="1240" width="18" height="3" fill="#54708f"/>
+  <text class="legend" x="76" y="1246">Solid line = mapped foreign key</text>
+  <path d="M330 1242 H370" class="logical"/>
+  <text class="legend" x="380" y="1246">Dashed line = logical/scalar reference, not enforced as a foreign key</text>
+  <text class="legend" x="48" y="1270">PK primary key · FK foreign key · UK unique constraint. Expense categories are not relationally linked to expenses in the current model.</text>
+</svg>

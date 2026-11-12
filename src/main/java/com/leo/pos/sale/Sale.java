@@ -59,7 +59,7 @@ public class Sale {
 
 	@ManyToOne
 	@JoinColumn(name = "customer_id")
-	@JsonIgnoreProperties({"phone", "email", "creditEligible", "createdBy", "createdAt", "shop"})
+	@JsonIgnoreProperties({"phone", "email", "createdBy", "createdAt", "shop"})
 	private Customer customer;
 
 	@OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)

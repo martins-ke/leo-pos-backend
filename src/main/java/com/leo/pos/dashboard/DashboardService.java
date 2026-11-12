@@ -6,12 +6,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.leo.pos.product.Product;
 import com.leo.pos.product.ProductRepository;
+import com.leo.pos.finance.ExpenseRepository;
 import com.leo.pos.security.ShopAccessService;
 import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
@@ -27,13 +29,15 @@ public class DashboardService {
 	private final ProductRepository productRepo;
 	private final ShopRepository shopRepo;
 	private final ShopAccessService shopAccessService;
+	private final ExpenseRepository expenseRepo;
 
 	public DashboardService(SaleRepository saleRepo, ProductRepository productRepo,
-			ShopRepository shopRepo, ShopAccessService shopAccessService) {
+			ShopRepository shopRepo, ShopAccessService shopAccessService, ExpenseRepository expenseRepo) {
 		this.saleRepo = saleRepo;
 		this.productRepo = productRepo;
 		this.shopRepo = shopRepo;
 		this.shopAccessService = shopAccessService;
+		this.expenseRepo = expenseRepo;
 	}
 
 	public DashboardSummaryResponse getSummary(String shopId, User actor) {
@@ -48,12 +52,19 @@ public class DashboardService {
 			shops = shopRepo.findByUserId(actor.getId());
 		}
 		List<Sale> allSales = shops.stream()
-				.flatMap(shop -> saleRepo.findByShopIdOrderByCreatedAtDesc(shop.getId()).stream()).toList();
+				.flatMap(shop -> saleRepo.findByShopIdOrderByCreatedAtDesc(shop.getId()).stream())
+				.sorted(Comparator.comparing(Sale::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+						.thenComparing(Sale::getId, Comparator.nullsLast(Comparator.reverseOrder())))
+				.toList();
 
 		BigDecimal todayRevenue = BigDecimal.ZERO;
 		BigDecimal todayGrossProfit = BigDecimal.ZERO;
 		BigDecimal monthRevenue = BigDecimal.ZERO;
 		BigDecimal monthGrossProfit = BigDecimal.ZERO;
+		BigDecimal todayCashCollected = BigDecimal.ZERO;
+		BigDecimal todayMpesaCollected = BigDecimal.ZERO;
+		BigDecimal todayCardCollected = BigDecimal.ZERO;
+		BigDecimal todayBankTransferCollected = BigDecimal.ZERO;
 		long totalSalesToday = 0;
 
 		for (Sale s : allSales) {
@@ -61,6 +72,15 @@ public class DashboardService {
 				if (!s.getCreatedAt().isBefore(startOfDay) && !s.getCreatedAt().isAfter(endOfDay)) {
 					todayRevenue = todayRevenue.add(s.getGrandTotal() != null ? s.getGrandTotal() : BigDecimal.ZERO);
 					todayGrossProfit = todayGrossProfit.add(calculateGrossProfit(s));
+					BigDecimal saleAmount = s.getGrandTotal() != null ? s.getGrandTotal() : BigDecimal.ZERO;
+					String paymentMethod = s.getPaymentMethod() == null ? "" : s.getPaymentMethod().toUpperCase();
+					switch (paymentMethod) {
+						case "CASH" -> todayCashCollected = todayCashCollected.add(saleAmount);
+						case "MPESA" -> todayMpesaCollected = todayMpesaCollected.add(saleAmount);
+						case "CARD" -> todayCardCollected = todayCardCollected.add(saleAmount);
+						case "BANK_TRANSFER" -> todayBankTransferCollected = todayBankTransferCollected.add(saleAmount);
+						default -> { }
+					}
 					totalSalesToday++;
 				}
 				if (!s.getCreatedAt().isBefore(startOfMonth)) {
@@ -68,6 +88,15 @@ public class DashboardService {
 					monthGrossProfit = monthGrossProfit.add(calculateGrossProfit(s));
 				}
 			}
+		}
+
+		BigDecimal todayExpenses = BigDecimal.ZERO;
+		BigDecimal monthExpenses = BigDecimal.ZERO;
+		for (Shop shop : shops) {
+			todayExpenses = todayExpenses.add(zeroIfNull(expenseRepo.sumByShopAndPeriod(
+					shop.getId(), LocalDate.now(), LocalDate.now())));
+			monthExpenses = monthExpenses.add(zeroIfNull(expenseRepo.sumByShopAndPeriod(
+					shop.getId(), LocalDate.now().withDayOfMonth(1), LocalDate.now())));
 		}
 
 		List<Product> allProducts = shops.stream()
@@ -103,12 +132,22 @@ public class DashboardService {
 				todayGrossProfit,
 				monthRevenue,
 				monthGrossProfit,
+				todayCashCollected,
+				todayMpesaCollected,
+				todayCardCollected,
+				todayBankTransferCollected,
+				todayGrossProfit.subtract(todayExpenses),
+				monthGrossProfit.subtract(monthExpenses),
 				totalSalesToday,
 				totalProducts,
 				lowStockProducts.size(),
 				recentSales,
 				lowStockProducts
 		);
+	}
+
+	private BigDecimal zeroIfNull(BigDecimal value) {
+		return value != null ? value : BigDecimal.ZERO;
 	}
 
 	private BigDecimal calculateGrossProfit(Sale sale) {

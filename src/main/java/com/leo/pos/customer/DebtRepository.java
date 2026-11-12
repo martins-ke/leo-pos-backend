@@ -12,5 +12,6 @@ public interface DebtRepository extends JpaRepository<Debt, String> {
 	Page<Debt> findByCustomerShopIdAndStatusOrderByCreatedAtDesc(String shopId, String status, Pageable pageable);
 	Page<Debt> findByCustomerShopIdOrderByCreatedAtDesc(String shopId, Pageable pageable);
 	boolean existsByCustomerId(String customerId);
+	boolean existsBySaleId(String saleId);
 	List<Debt> findByStatusAndPurgeAtLessThanEqual(String status, Instant purgeAt, Pageable pageable);
 }

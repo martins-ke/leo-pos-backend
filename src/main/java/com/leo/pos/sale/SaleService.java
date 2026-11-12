@@ -18,6 +18,7 @@ import com.leo.pos.ApiResponse;
 import com.leo.pos.audit.AuditService;
 import com.leo.pos.customer.Customer;
 import com.leo.pos.customer.CustomerRepository;
+import com.leo.pos.customer.DebtService;
 import com.leo.pos.finance.AccountLedgerService;
 import com.leo.pos.finance.IdempotencyService;
 import com.leo.pos.product.Product;
@@ -40,11 +41,12 @@ public class SaleService {
 	private final AccountLedgerService accountLedger;
 	private final AuditService auditService;
 	private final IdempotencyService idempotencyService;
+	private final DebtService debtService;
 
 	public SaleService(SaleRepository saleRepo, ProductRepository productRepo, ShopRepository shopRepo,
 			CustomerRepository customerRepo, ShopAccessService shopAccessService,
 			AccountLedgerService accountLedger, AuditService auditService,
-			IdempotencyService idempotencyService) {
+			IdempotencyService idempotencyService, DebtService debtService) {
 		this.saleRepo = saleRepo;
 		this.productRepo = productRepo;
 		this.shopRepo = shopRepo;
@@ -53,6 +55,7 @@ public class SaleService {
 		this.accountLedger = accountLedger;
 		this.auditService = auditService;
 		this.idempotencyService = idempotencyService;
+		this.debtService = debtService;
 	}
 
 	@Transactional
@@ -114,19 +117,22 @@ public class SaleService {
 		if (request.grandTotal() == null || request.grandTotal().compareTo(calculatedTotal) != 0) {
 			return badRequest("Sale total does not match the current product prices");
 		}
-		BigDecimal tendered = request.amountTendered() == null ? BigDecimal.ZERO : request.amountTendered();
-		if (tendered.compareTo(calculatedTotal) < 0) {
-			return badRequest("Amount tendered is less than the sale total");
-		}
 		String paymentMethod = request.paymentMethod() == null ? "CASH" : request.paymentMethod().toUpperCase();
-		if (!Set.of("CASH", "MPESA", "CARD", "BANK_TRANSFER").contains(paymentMethod)) {
+		boolean onCredit = "DEBT".equals(paymentMethod);
+		if (!Set.of("CASH", "MPESA", "CARD", "BANK_TRANSFER", "DEBT").contains(paymentMethod)) {
 			return badRequest("Unsupported payment method");
 		}
-		if (!"CASH".equals(paymentMethod) && tendered.compareTo(calculatedTotal) != 0) {
+		BigDecimal tendered = request.amountTendered() == null ? BigDecimal.ZERO : request.amountTendered();
+		if (onCredit && tendered.signum() != 0) {
+			return badRequest("A debt sale cannot include a payment amount");
+		}
+		if (!onCredit && tendered.compareTo(calculatedTotal) < 0) {
+			return badRequest("Amount tendered is less than the sale total");
+		}
+		if (!onCredit && !"CASH".equals(paymentMethod) && tendered.compareTo(calculatedTotal) != 0) {
 			return badRequest("Non-cash payments must equal the sale total");
 		}
 
-		accountLedger.initialize(shop);
 		Customer customer = null;
 		if (request.customerId() != null && !request.customerId().isBlank()) {
 			customer = customerRepo.findById(request.customerId())
@@ -135,6 +141,13 @@ public class SaleService {
 				throw new EntityNotFoundException("Customer not found in this shop");
 			}
 		}
+		if (onCredit && customer == null) {
+			return badRequest("Select a customer to record this sale as a debt");
+		}
+		if (onCredit && !customer.isCreditEligible()) {
+			return badRequest("This customer is not approved for credit");
+		}
+		accountLedger.initialize(shop);
 		String receiptNumber = "REC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMdd"))
 				+ "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 		Sale sale = new Sale(UUID.randomUUID().toString(), receiptNumber, calculatedTotal, tendered,
@@ -151,8 +164,12 @@ public class SaleService {
 		}
 
 		Sale savedSale = saleRepo.save(sale);
-		accountLedger.post(shop, "SALE_RECEIPT", "IN", calculatedTotal, paymentMethod,
-				"Sale receipt " + receiptNumber, "SALE", savedSale.getId(), actor);
+		if (onCredit) {
+			debtService.createForSale(savedSale, customer, actor);
+		} else {
+			accountLedger.post(shop, "SALE_RECEIPT", "IN", calculatedTotal, paymentMethod,
+					"Sale receipt " + receiptNumber, "SALE", savedSale.getId(), actor);
+		}
 		auditService.record(shop.getId(), actor, "SALE_RECORDED", "SALE", savedSale.getId(),
 				"receiptNumber=" + receiptNumber + ", total=" + calculatedTotal);
 		idempotencyService.complete(idempotencyKey, savedSale.getId());
@@ -166,12 +183,8 @@ public class SaleService {
 		if (shopId != null && !shopId.isBlank() && !"all".equalsIgnoreCase(shopId)) {
 			shopAccessService.requireShopAccess(shopId, actor);
 			sales = saleRepo.findByShopIdOrderByCreatedAtDesc(shopId);
-		} else if ("OWNER".equalsIgnoreCase(actor.getRole())) {
-			sales = shopRepo.findByUserId(actor.getId()).stream()
-					.flatMap(shop -> saleRepo.findByShopIdOrderByCreatedAtDesc(shop.getId()).stream()).toList();
 		} else {
-			String ownerId = actor.getCreatedBy();
-			sales = shopRepo.findByUserId(ownerId).stream()
+			sales = shopAccessService.getAccessibleShops(actor).stream()
 					.flatMap(shop -> saleRepo.findByShopIdOrderByCreatedAtDesc(shop.getId()).stream()).toList();
 		}
 		List<Sale> newestFirst = sales.stream()

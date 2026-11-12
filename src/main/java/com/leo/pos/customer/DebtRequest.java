@@ -13,5 +13,5 @@ public record DebtRequest(
 		@NotBlank String customerId,
 		@NotNull @DecimalMin(value = "0.01") @Digits(integer = 10, fraction = 2) BigDecimal amount,
 		LocalDate dueDate,
-		String description
+		String description 
 ) {}

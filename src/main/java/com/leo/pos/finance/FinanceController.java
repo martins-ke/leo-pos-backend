@@ -41,6 +41,13 @@ public class FinanceController {
 				"Expenses loaded", true, Instant.now()));
 	}
 
+	@GetMapping("/expenses/daily-summary")
+	public ResponseEntity<ApiResponse<java.math.BigDecimal>> dailyExpenseTotal(
+			@RequestParam String shopId, @AuthenticationPrincipal User actor) {
+		return ResponseEntity.ok(new ApiResponse<>(
+				financeService.dailyExpenseTotal(shopId, actor), "Today's expenses loaded", true, Instant.now()));
+	}
+
 	@PostMapping("/expenses")
 	public ResponseEntity<ApiResponse<Expense>> createExpense(
 			@Valid @RequestBody ExpenseRequest request,
@@ -84,6 +91,14 @@ public class FinanceController {
 		return ResponseEntity.ok(new ApiResponse<>(
 				financeService.withdrawals(shopId, Math.max(0, page), Math.max(1, size), actor),
 				"Stock withdrawals loaded", true, Instant.now()));
+	}
+
+	@GetMapping("/inventory/withdrawals/daily-summary")
+	public ResponseEntity<ApiResponse<java.math.BigDecimal>> dailyStockWithdrawalTotal(
+			@RequestParam String shopId, @AuthenticationPrincipal User actor) {
+		return ResponseEntity.ok(new ApiResponse<>(
+				financeService.dailyStockWithdrawalTotal(shopId, actor),
+				"Today's stock use loaded", true, Instant.now()));
 	}
 
 	@PostMapping("/inventory/purchases")

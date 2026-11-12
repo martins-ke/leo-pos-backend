@@ -28,14 +28,15 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(SQLException.class)
 	public ResponseEntity<ApiResponse<String>> handleSqlError(SQLException ex){ 
 		log.error("SQL Exception encountered: ", ex);
-		return ResponseEntity.status(400).body(new ApiResponse<>(null, "Database error: " + (ex.getMessage() != null ? ex.getMessage() : "SQL Exception"), false, Instant.now())); 
+		return ResponseEntity.status(500).body(new ApiResponse<>(null,
+				"A database operation failed. Please try again.", false, Instant.now())); 
 	}
 
 	@ExceptionHandler(org.springframework.dao.DataAccessException.class)
 	public ResponseEntity<ApiResponse<String>> handleDataAccessException(org.springframework.dao.DataAccessException ex){ 
 		log.error("Data access exception: ", ex);
-		String msg = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
-		return ResponseEntity.status(400).body(new ApiResponse<>(null, "Database error: " + (msg != null ? msg : "Data access error"), false, Instant.now())); 
+		return ResponseEntity.status(500).body(new ApiResponse<>(null,
+				"A database operation failed. Please try again.", false, Instant.now())); 
 	}
 	
 	@ExceptionHandler(MethodArgumentNotValidException.class) 
@@ -67,14 +68,9 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ApiResponse<String>> dataIntegrityViolation(DataIntegrityViolationException ex) {  
-		String msg = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
-		if (msg != null && msg.toLowerCase().contains("foreign key constraint")) {
-			return ResponseEntity.status(400).body(new ApiResponse<>(null, "Cannot delete or modify record because it is referenced by other items in the system.", false, Instant.now()));
-		}
-		if (msg != null && (msg.toLowerCase().contains("duplicate") || msg.toLowerCase().contains("unique"))) {
-			return ResponseEntity.status(400).body(new ApiResponse<>(null, "A record with this name or identifier already exists! Must be unique.", false, Instant.now()));
-		}
-		return ResponseEntity.status(400).body(new ApiResponse<>(null, "Database integrity constraint error: " + (msg != null ? msg : "Operation failed."), false, Instant.now())); 
+		log.error("Data integrity violation: ", ex);
+		return ResponseEntity.status(400).body(new ApiResponse<>(null,
+				"The requested change conflicts with existing data.", false, Instant.now())); 
 	}
 
 	@ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
@@ -93,7 +89,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiResponse<String>> handleGenericException(Exception ex) {
 		log.error("Unhandled server exception: ", ex);
-		String message = ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "An unexpected server error occurred.";
-		return ResponseEntity.status(500).body(new ApiResponse<>(null, "Server Error: " + message, false, Instant.now()));
+		return ResponseEntity.status(500).body(new ApiResponse<>(null,
+				"An unexpected server error occurred.", false, Instant.now()));
 	}
 }
