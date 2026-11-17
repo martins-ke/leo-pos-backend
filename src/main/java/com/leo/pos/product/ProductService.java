@@ -16,6 +16,7 @@ import com.leo.pos.security.ShopAccessService;
 import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
 import com.leo.pos.staff.User;
+import com.leo.pos.user.Role;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -40,7 +41,7 @@ public class ProductService {
 		validatePriceRelationship(req);
 		Shop shop;
 		if (shopId == null || shopId.isBlank()) {
-			if (!"OWNER".equalsIgnoreCase(actor.getRole())) {
+			if (!Role.OWNER.equals(actor.getRole())) {
 				throw new org.springframework.security.access.AccessDeniedException("Only owners can create products");
 			}
 			List<Shop> ownedShops = shopRepo.findByUserId(actor.getId());

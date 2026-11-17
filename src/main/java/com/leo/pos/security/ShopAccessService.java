@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
 import com.leo.pos.staff.User;
+import com.leo.pos.user.Role;
+import com.leo.pos.user.Status;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -23,17 +25,17 @@ public class ShopAccessService {
 	public Shop requireShopAccess(String shopId, User actor) {
 		Shop shop = shopRepository.findById(shopId)
 				.orElseThrow(() -> new EntityNotFoundException("Shop not found"));
-		if (actor == null || !"ACTIVE".equalsIgnoreCase(actor.getStatus())) {
+		if (actor == null || !Status.ACTIVE.equals(actor.getStatus())) {
 			throw new AccessDeniedException("An active user is required");
 		}
-		if ("OWNER".equalsIgnoreCase(actor.getRole())) {
+		if (Role.OWNER.equals(actor.getRole())) {
 			if (shop.getOwnerId() == null || !actor.getId().equals(shop.getOwnerId().getId())) {
 				throw new AccessDeniedException("You do not have access to this shop");
 			}
 			return shop;
 		}
 		// Staff users must be explicitly assigned to the shop they are accessing
-		if ("STAFF".equalsIgnoreCase(actor.getRole())) {
+		if (Role.STAFF.equals(actor.getRole())) {
 			// Ensure the staff belongs to the owner of the shop
 			if (actor.getCreatedBy() == null || shop.getOwnerId() == null || !actor.getCreatedBy().equals(shop.getOwnerId().getId())) {
 				throw new AccessDeniedException("You do not have access to this shop");
@@ -49,13 +51,13 @@ public class ShopAccessService {
 	}
 
 	public List<Shop> getAccessibleShops(User actor) {
-		if (actor == null || !"ACTIVE".equalsIgnoreCase(actor.getStatus())) {
+		if (actor == null || !Status.ACTIVE.equals(actor.getStatus())) {
 			throw new AccessDeniedException("An active user is required");
 		}
-		if ("OWNER".equalsIgnoreCase(actor.getRole())) {
+		if (Role.OWNER.equals(actor.getRole())) {
 			return shopRepository.findByUserId(actor.getId());
 		}
-		if (!"STAFF".equalsIgnoreCase(actor.getRole()) || actor.getShops() == null) {
+		if (!Role.STAFF.equals(actor.getRole()) || actor.getShops() == null) {
 			throw new AccessDeniedException("You do not have access to these shops");
 		}
 		return actor.getShops().stream()
@@ -65,7 +67,7 @@ public class ShopAccessService {
 
 	public Shop requireOwnerShop(String shopId, User actor) {
 		Shop shop = requireShopAccess(shopId, actor);
-		if (!"OWNER".equalsIgnoreCase(actor.getRole())) {
+		if (!Role.OWNER.equals(actor.getRole())) {
 			throw new AccessDeniedException("Only the shop owner can perform this operation");
 		}
 		return shop;

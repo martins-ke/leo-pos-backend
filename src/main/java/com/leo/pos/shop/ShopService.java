@@ -15,6 +15,7 @@ import com.leo.pos.finance.ShopAccount;
 import com.leo.pos.finance.ShopAccountRepository;
 import com.leo.pos.staff.User;
 import com.leo.pos.staff.UserRepository;
+import com.leo.pos.user.Role;
 
 @Service
 public class ShopService {
@@ -48,7 +49,7 @@ public class ShopService {
 	
 	public ResponseEntity<ApiResponse<List<Shop>>> getAllShops(User actor){
 		List<Shop> shops;
-		if ("OWNER".equalsIgnoreCase(actor.getRole())) {
+		if (Role.OWNER.equals(actor.getRole())) {
 			shops = shopRepo.findByUserId(actor.getId());
 		} else {
 			User freshActor = userRepo.findById(actor.getId()).orElse(actor);
@@ -67,7 +68,7 @@ public class ShopService {
 		if (shop == null) {
 			return ResponseEntity.status(404).body(new ApiResponse<>(null, "Shop not found", false, Instant.now()));
 		}
-		if (!"OWNER".equalsIgnoreCase(actor.getRole()) || shop.getOwnerId() == null
+		if (!Role.OWNER.equals(actor.getRole()) || shop.getOwnerId() == null
 				|| !actor.getId().equals(shop.getOwnerId().getId())) {
 			throw new org.springframework.security.access.AccessDeniedException("You do not own this shop");
 		}

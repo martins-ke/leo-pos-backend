@@ -12,11 +12,11 @@ Run the API with `SPRING_PROFILES_ACTIVE=prod`. Provide these values through the
 - `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD`: a dedicated application user limited to the Leo database. Do not use `root`.
 - `LEO_PLATFORM_SETUP_KEY`: a strong one-time setup key if the platform-owner account has not yet been provisioned.
 
-The production profile requires JWT and CORS settings and has no datasource credential/URL defaults. It enforces MySQL server certificate and hostname verification, disables SQL logging, and sets Hibernate schema handling to `validate`. Provision the database schema with reviewed, versioned migrations before deploying; the project does not currently include an automatic migration runner. Do not change production schema handling to `update`.
+The production profile requires JWT and CORS settings and has no datasource credential/URL defaults. It enforces MySQL server certificate and hostname verification, disables SQL logging, and sets Hibernate schema handling to `validate`. Provision the database schema with reviewed, versioned migrations before deploying; the project does not currently include an automatic migration runner. The product-category change has a one-time migration at [2026-11-12-product-categories.sql](./migrations/2026-11-12-product-categories.sql); back up the database, run its preflight queries, and resolve any returned rows before applying its DDL. This migration covers categories only and is not a substitute for checking the complete production schema against all current entities. Do not change production schema handling to `update`.
 
 ## Frontend/API routing
 
-Set `VITE_API_BASE_URL` at frontend build time to the API's public base URL. The checked-in production value is empty, which is appropriate only when the frontend's origin reverse-proxies API requests to the backend. If the API uses a separate origin, set that exact HTTPS URL and include the frontend origin in `LEO_CORS_ALLOWED_ORIGINS`.
+Set `VITE_API_BASE_URL` at frontend build time to the API's public base URL. The checked-in `.env.production` uses an empty value, which is appropriate only when the frontend's origin reverse-proxies API requests to the backend. If the API uses a separate origin, set that exact HTTPS URL and include the frontend origin in `LEO_CORS_ALLOWED_ORIGINS`.
 
 Terminate HTTPS at the hosting platform or trusted reverse proxy, redirect HTTP to HTTPS, and do not expose the database publicly. Keep setup keys and database/JWT secrets out of frontend build variables.
 

@@ -32,38 +32,27 @@ import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
 import com.leo.pos.staff.User;
 import com.leo.pos.staff.UserRepository;
+import com.leo.pos.user.Role;
+import com.leo.pos.user.Status;                     // ← ADDED
 
 @AutoConfigureMockMvc
 @SpringBootTest
 class ProductCategoryIntegrationTest {
 
-	@Autowired
-	private MockMvc mockMvc;
-
-	@Autowired
-	private ProductCategoryService categoryService;
-
-	@Autowired
-	private ProductService productService;
-
-	@Autowired
-	private ProductRepository productRepository;
-
-	@Autowired
-	private ShopRepository shopRepository;
-
-	@Autowired
-	private UserRepository userRepository;
-
-	@Autowired
-	private JwtService jwtService;
+	@Autowired private MockMvc mockMvc;
+	@Autowired private ProductCategoryService categoryService;
+	@Autowired private ProductService productService;
+	@Autowired private ProductRepository productRepository;
+	@Autowired private ShopRepository shopRepository;
+	@Autowired private UserRepository userRepository;
+	@Autowired private JwtService jwtService;
 
 	@Test
 	@Transactional
 	void categoryAndProductPageEndpointsAreMappedAndAllowCategoryCreation() throws Exception {
 		String suffix = UUID.randomUUID().toString();
 		User owner = userRepository.save(new User("route-owner-" + suffix, "route-owner-" + suffix,
-				"route-owner-" + suffix + "@example.test", "unused", "OWNER", "ACTIVE", null));
+				"route-owner-" + suffix + "@example.test", "unused", Role.OWNER, Status.ACTIVE, null)); // ← Status.ACTIVE
 		Shop shop = shopRepository.save(new Shop("route-shop-" + suffix, "Route Shop " + suffix,
 				"Retail", "Town", null, LocalDate.now(), owner));
 		String authorization = "Bearer " + jwtService.generateToken(owner);
@@ -98,7 +87,7 @@ class ProductCategoryIntegrationTest {
 	void categoryAssignmentIsShopScopedAndArchivingPreservesProductHistory() {
 		String suffix = UUID.randomUUID().toString();
 		User owner = userRepository.save(new User("owner-" + suffix, "owner-" + suffix,
-				"owner-" + suffix + "@example.test", "unused", "OWNER", "ACTIVE", null));
+				"owner-" + suffix + "@example.test", "unused", Role.OWNER, Status.ACTIVE, null)); // ← Status.ACTIVE
 		Shop shop = shopRepository.save(new Shop("shop-" + suffix, "Shop " + suffix, "Retail",
 				"Town", null, LocalDate.now(), owner));
 		Shop otherShop = shopRepository.save(new Shop("other-shop-" + suffix, "Other Shop " + suffix,

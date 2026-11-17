@@ -12,6 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.leo.pos.staff.User;
 import com.leo.pos.staff.UserRepository;
+import com.leo.pos.user.Status;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -42,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				String userId = jwtService.extractUserId(token);
 				if (userId != null && !userId.isBlank()) {
 					userRepository.findById(userId)
-							.filter(user -> "ACTIVE".equalsIgnoreCase(user.getStatus()))
+							.filter(user -> Status.ACTIVE.equals(user.getStatus()))
 							.ifPresent(user -> authenticate(user, request));
 				}
 			}

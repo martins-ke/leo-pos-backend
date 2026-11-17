@@ -25,6 +25,8 @@ import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
 import com.leo.pos.staff.User;
 import com.leo.pos.staff.UserRepository;
+import com.leo.pos.user.Role;
+import com.leo.pos.user.Status;
 import com.leo.pos.util.IdGenarator;
 
 @Service
@@ -35,7 +37,7 @@ public class AuthService {
 	private final ShopRepository shopRepo;
 	private final ShopAccountRepository accountRepo;
 	private final String platformSetupKey;
-	private final Environment environment;
+	private final Environment environment; 
 	
 	public AuthService(UserRepository userRepo, PasswordEncoder passwordEncoder,
 			JwtService jwtService, ShopRepository shopRepo, ShopAccountRepository accountRepo,
@@ -52,7 +54,7 @@ public class AuthService {
 
 	public ResponseEntity<ApiResponse<PlatformSetupStatus>> getPlatformSetupStatus() {
 		boolean setupKeyRequired = !platformSetupKey.isBlank();
-		boolean platformOwnerExists = userRepo.findByRole("SUPER_ADMIN").isPresent();
+		boolean platformOwnerExists = userRepo.findByRole(Role.SUPER_ADMIN).isPresent();
 		boolean setupAvailable = !platformOwnerExists
 				&& (setupKeyRequired || isDevelopmentProfile());
 		String message = setupAvailable
@@ -82,7 +84,7 @@ public class AuthService {
 					null, "Configure LEO_PLATFORM_SETUP_KEY to create the platform owner outside local development.", false, Instant.now()));
 		}
 
-		if (userRepo.findByRole("SUPER_ADMIN").isPresent()) {
+		if (userRepo.findByRole(Role.SUPER_ADMIN).isPresent()) {
 			return ResponseEntity.status(409).body(new ApiResponse<>(
 					null, "The Leo platform owner has already been set up.", false, Instant.now()));
 		}
@@ -112,8 +114,8 @@ public class AuthService {
 				username,
 				email,
 				passwordEncoder.encode(password),
-				"SUPER_ADMIN",
-				"ACTIVE",
+				Role.SUPER_ADMIN,
+				Status.ACTIVE,                                     // ← was "ACTIVE"
 				"SYSTEM_SETUP");
 		User savedUser = userRepo.save(platformOwner);
 		String token = jwtService.generateToken(savedUser);
@@ -153,8 +155,8 @@ public class AuthService {
 			return ResponseEntity.status(400).body(new ApiResponse<>(null, "Password mismatch! Please confirm and sign up again.", false, Instant.now())); 
 		}
 		
-		String assignedRole = "OWNER";
-		String initialStatus = "ACTIVE";
+		Role assignedRole = Role.OWNER; 
+		Status initialStatus = Status.ACTIVE;                          // ← was String "ACTIVE"
 		
 		String userId = IdGenarator.generateId(username, userRepo.count());
 		String hashedPassword = passwordEncoder.encode(password); 
@@ -164,10 +166,10 @@ public class AuthService {
 
 		// If onboarding as a new SaaS Shop Owner, automatically provision their initial default Shop and Account
 		String shopId = null;
-		if ("OWNER".equalsIgnoreCase(assignedRole)) {
+		if (Role.OWNER.equals(assignedRole)) {
 			String rawBusinessName = request.businessName() != null && !request.businessName().isBlank()
 					? request.businessName().trim()
-					: username + " Retail Store";
+					: username + " Enterprice Store";
 			
 			// Guarantee unique shop name across all tenants
 			String uniqueShopName = rawBusinessName;
@@ -175,7 +177,7 @@ public class AuthService {
 				uniqueShopName = rawBusinessName + " (" + userId.substring(Math.max(0, userId.length() - 4)) + ")";
 			}
 			
-			String shopType = request.businessType() != null && !request.businessType().isBlank() ? request.businessType() : "Retail Store";
+			String shopType = request.businessType() != null && !request.businessType().isBlank() ? request.businessType() : "Enterprice Store";
 			String location = request.businessLocation() != null && !request.businessLocation().isBlank() ? request.businessLocation() : "Main Branch";
 			
 			shopId = UUID.randomUUID().toString();
@@ -186,8 +188,8 @@ public class AuthService {
 			accountRepo.save(new ShopAccount(UUID.randomUUID().toString(), savedShop));
 		}
 		
-		String token = "ACTIVE".equalsIgnoreCase(savedUser.getStatus()) ? jwtService.generateToken(savedUser) : null;
-		String successMsg = "Shop owner account created successfully.";
+		String token = savedUser.getStatus() == Status.ACTIVE ? jwtService.generateToken(savedUser) : null;
+		String successMsg = "Shop owner account created successfully ✅";
 				
 		return ResponseEntity.status(201).body(new ApiResponse<>(new AuthResponse(savedUser, token), successMsg, true, Instant.now())); 
 	}
@@ -208,19 +210,19 @@ public class AuthService {
 			return ResponseEntity.status(400).body(new ApiResponse<>(null, "Invalid username/email or password.", false, Instant.now()));
 		}
 
-		if ("PENDING".equalsIgnoreCase(user.getStatus())) {
+		if (user.getStatus() == Status.PENDING) {                       // ← was "PENDING".equalsIgnoreCase(...)
 			return ResponseEntity.status(403).body(new ApiResponse<>(null, "Account pending owner approval. Please ask your shop owner to approve your account.", false, Instant.now()));
 		}
 
-		if ("INACTIVE".equalsIgnoreCase(user.getStatus()) || "DEACTIVATED".equalsIgnoreCase(user.getStatus())) {
-			return ResponseEntity.status(403).body(new ApiResponse<>(null, "Your account has been deactivated. Please contact your manager.", false, Instant.now()));
+		if (user.getStatus() == Status.INACTIVE || user.getStatus() == Status.DISABLED) {  // ← was "INACTIVE".equalsIgnoreCase(...) || "DEACTIVATED".equalsIgnoreCase(...)
+			return ResponseEntity.status(403).body(new ApiResponse<>(null, "Your account has been deactivated. Please contact your service provider.", false, Instant.now()));
 		}
 
-		if ("STAFF".equalsIgnoreCase(user.getRole()) && user.getCreatedBy() != null) {
+		if (Role.STAFF.equals(user.getRole()) && user.getCreatedBy() != null) {
 			User shopOwner = userRepo.findById(user.getCreatedBy()).orElse(null);
 			if (shopOwner != null
-					&& "OWNER".equalsIgnoreCase(shopOwner.getRole())
-					&& !"ACTIVE".equalsIgnoreCase(shopOwner.getStatus())) {
+					&& Role.OWNER.equals(shopOwner.getRole())
+					&& shopOwner.getStatus() != Status.ACTIVE) {        // ← was !"ACTIVE".equalsIgnoreCase(...)
 				return ResponseEntity.status(403).body(new ApiResponse<>(
 						null,
 						"Your shop is suspended. Please contact your shop owner before signing in.",

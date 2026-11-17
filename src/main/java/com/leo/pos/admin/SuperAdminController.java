@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.leo.pos.ApiResponse;
 import com.leo.pos.staff.User;
+import com.leo.pos.user.Role;
 
 @RestController
 @RequestMapping("/admin/tenants")
@@ -22,8 +23,8 @@ import com.leo.pos.staff.User;
 public class SuperAdminController {
 
 	private final SuperAdminService adminService;
-
-	public SuperAdminController(SuperAdminService adminService) {
+ 
+	public SuperAdminController(SuperAdminService adminService) { 
 		this.adminService = adminService;
 	}
 
@@ -51,7 +52,7 @@ public class SuperAdminController {
 		if (actor == null) {
 			throw new AccessDeniedException("Authentication required");
 		}
-		if (!"SUPER_ADMIN".equalsIgnoreCase(actor.getRole())) {
+		if (!Role.SUPER_ADMIN.equals(actor.getRole())) { 
 			throw new AccessDeniedException("Access Denied: Super-admin privileges required for SaaS Platform management.");
 		}
 	}

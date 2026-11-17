@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import com.leo.pos.ApiResponse;
 import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
+import com.leo.pos.user.Role;
+import com.leo.pos.user.Status;
 import com.leo.pos.util.IdGenarator;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -44,10 +46,15 @@ public class UserService {
 					.body(new ApiResponse<>(null, "Username already exists! Please select a different username.", false, Instant.now()));
 		}
 
-		String role = "STAFF";
-		String status = req.status() != null && !req.status().isBlank()
-				? req.status().toUpperCase()
-				: "ACTIVE";
+		Role role = Role.STAFF;
+		Status status = Status.ACTIVE;
+		if (req.status() != null && !req.status().isBlank()) {
+			status = Status.fromString(req.status());
+			if (status == null) {
+				return ResponseEntity.status(400)
+						.body(new ApiResponse<>(null, "Invalid status: '" + req.status() + "'. Allowed values: ACTIVE, INACTIVE, DISABLED, PENDING", false, Instant.now()));
+			}
+		}
 		String userId = IdGenarator.generateId(username, userRepo.count());
 		String hashedPassword = passwordEncoder.encode(req.password().trim());
 
@@ -69,9 +76,9 @@ public class UserService {
 		if (!actor.getId().equals(user.getCreatedBy())) {
 			throw new AccessDeniedException("You cannot manage this staff member ⚠");
 		}
-		user.setRole("STAFF");
-		user.setCreatedBy(actor.getId());
-		user.setStatus("ACTIVE");
+		user.setRole(Role.STAFF);
+		user.setCreatedBy(actor.getId()); 
+		user.setStatus(Status.ACTIVE);
 		User saved = userRepo.save(user);
 		return ResponseEntity.ok(new ApiResponse<>(saved, "Staff approved and activated ✅", true, Instant.now()));
 	}
@@ -86,7 +93,7 @@ public class UserService {
 		if (!actor.getId().equals(user.getCreatedBy())) {
 			throw new AccessDeniedException("You cannot manage this staff member ⚠");
 		}
-		user.setStatus(user.getStatus().equalsIgnoreCase("ACTIVE") ? "INACTIVE" : "ACTIVE");
+		user.setStatus(user.getStatus() == Status.ACTIVE ? Status.INACTIVE : Status.ACTIVE);
 		User saved = userRepo.save(user);
 		return ResponseEntity.ok(
 				new ApiResponse<>(saved, "Staff status toggled to " + saved.getStatus()+ "✅", true, Instant.now()));
@@ -99,7 +106,7 @@ public class UserService {
 			return ResponseEntity.status(404)
 					.body(new ApiResponse<>(null, "Staff user not found ⚠", false, Instant.now()));
 		}
-		if (!"STAFF".equalsIgnoreCase(staff.getRole())) {
+		if (!Role.STAFF.equals(staff.getRole())) {
 			return ResponseEntity.status(400)
 					.body(new ApiResponse<>(null, "User is not a staff member ⚠", false, Instant.now()));
 		}
@@ -126,7 +133,7 @@ public class UserService {
 			return ResponseEntity.status(404)
 					.body(new ApiResponse<>(null, "Staff user not found", false, Instant.now()));
 		}
-		if (!"STAFF".equalsIgnoreCase(staff.getRole())) {
+		if (!Role.STAFF.equals(staff.getRole())) {
 			return ResponseEntity.status(400)
 					.body(new ApiResponse<>(null, "User is not a staff member", false, Instant.now()));
 		}

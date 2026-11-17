@@ -34,43 +34,24 @@ import com.leo.pos.sale.SaleRepository;
 import com.leo.pos.security.JwtService;
 import com.leo.pos.staff.User;
 import com.leo.pos.staff.UserRepository;
+import com.leo.pos.user.Role;
+import com.leo.pos.user.Status;                     // ← ADDED
 
 @AutoConfigureMockMvc
 @SpringBootTest
 class LeoApplicationTests {
 
-	@Autowired
-	private MockMvc mockMvc;
-
-	@Autowired
-	private UserRepository userRepository;
-
-	@Autowired
-	private ShopRepository shopRepository;
-
-	@Autowired
-	private ShopAccountRepository shopAccountRepository;
-
-	@Autowired
-	private AccountTransactionRepository accountTransactionRepository;
-
-	@Autowired
-	private SaleRepository saleRepository;
-
-	@Autowired
-	private CustomerRepository customerRepository;
-
-	@Autowired
-	private ProductRepository productRepository;
-
-	@Autowired
-	private ProductService productService;
-
-	@Autowired
-	private JwtService jwtService;
-
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	@Autowired private MockMvc mockMvc;
+	@Autowired private UserRepository userRepository;
+	@Autowired private ShopRepository shopRepository;
+	@Autowired private ShopAccountRepository shopAccountRepository;
+	@Autowired private AccountTransactionRepository accountTransactionRepository;
+	@Autowired private SaleRepository saleRepository;
+	@Autowired private CustomerRepository customerRepository;
+	@Autowired private ProductRepository productRepository;
+	@Autowired private ProductService productService;
+	@Autowired private JwtService jwtService;
+	@Autowired private PasswordEncoder passwordEncoder;
 
 	private String authorizationHeader(User user) {
 		return "Bearer " + jwtService.generateToken(user);
@@ -139,7 +120,7 @@ class LeoApplicationTests {
 				.andExpect(jsonPath("$.body.user.role").value("OWNER"));
 
 		User owner = userRepository.findByUsername("public-owner-test").orElseThrow();
-		org.junit.jupiter.api.Assertions.assertEquals("ACTIVE", owner.getStatus());
+		org.junit.jupiter.api.Assertions.assertEquals(Status.ACTIVE, owner.getStatus());   // ← Status.ACTIVE
 		org.junit.jupiter.api.Assertions.assertTrue(shopRepository.findByUserId(owner.getId()).stream()
 				.anyMatch(shop -> "Public Owner Test Shop".equals(shop.getName())));
 
@@ -153,10 +134,10 @@ class LeoApplicationTests {
 	void suspendedShopOwnerPreventsCashierLogin() throws Exception {
 		User owner = userRepository.save(new User(
 				"suspended-shop-owner", "suspended-shop-owner", "suspended-shop-owner@example.test",
-				"unused", "OWNER", "INACTIVE", null));
+				"unused", Role.OWNER, Status.INACTIVE, null));                             // ← Status.INACTIVE
 		userRepository.save(new User(
 				"suspended-shop-cashier", "suspended-shop-cashier", "suspended-shop-cashier@example.test",
-				passwordEncoder.encode("cashier-password"), "STAFF", "ACTIVE", owner.getId()));
+				passwordEncoder.encode("cashier-password"), Role.STAFF, Status.ACTIVE, owner.getId())); // ← Status.ACTIVE
 
 		mockMvc.perform(post("/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -176,10 +157,10 @@ class LeoApplicationTests {
 	void cashierCanLoginWhenTheirShopOwnerIsActive() throws Exception {
 		User owner = userRepository.save(new User(
 				"active-shop-owner", "active-shop-owner", "active-shop-owner@example.test",
-				"unused", "OWNER", "ACTIVE", null));
+				"unused", Role.OWNER, Status.ACTIVE, null));                               // ← Status.ACTIVE
 		userRepository.save(new User(
 				"active-shop-cashier", "active-shop-cashier", "active-shop-cashier@example.test",
-				passwordEncoder.encode("cashier-password"), "STAFF", "ACTIVE", owner.getId()));
+				passwordEncoder.encode("cashier-password"), Role.STAFF, Status.ACTIVE, owner.getId())); // ← Status.ACTIVE
 
 		mockMvc.perform(post("/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -255,7 +236,7 @@ class LeoApplicationTests {
 	@Transactional
 	void userIdHeaderLoadsProtectedShopAndFinancialData() throws Exception {
 		User owner = userRepository.save(new User(
-				"test-owner", "test-owner", "test-owner@example.test", "unused", "OWNER", "ACTIVE", null));
+				"test-owner", "test-owner", "test-owner@example.test", "unused", Role.OWNER, Status.ACTIVE, null)); // ← Status.ACTIVE
 		shopRepository.save(new Shop(
 				"test-shop", "Test Shop", "GENERAL", "Test location", null, LocalDate.now(), owner));
 
@@ -284,7 +265,7 @@ class LeoApplicationTests {
 	void createsShopWhenCountBasedIdentifierWouldCollide() throws Exception {
 		User owner = userRepository.save(new User(
 				"shop-create-owner", "shop-create-owner", "shop-create-owner@example.test",
-				"unused", "OWNER", "ACTIVE", null));
+				"unused", Role.OWNER, Status.ACTIVE, null));                               // ← Status.ACTIVE
 		shopRepository.save(new Shop(
 				"SH-0002", "Shop Previously Created", "Retail", "Town", null, LocalDate.now(), owner));
 
@@ -306,14 +287,14 @@ class LeoApplicationTests {
 	void staffProductAndSaleListsIncludeOnlyAssignedShops() throws Exception {
 		User owner = userRepository.save(new User(
 				"assigned-shop-owner", "assigned-shop-owner", "assigned-shop-owner@example.test",
-				"unused", "OWNER", "ACTIVE", null));
+				"unused", Role.OWNER, Status.ACTIVE, null));                               // ← Status.ACTIVE
 		Shop assignedShop = shopRepository.save(new Shop(
 				"assigned-shop", "Assigned Shop", "Retail", "Town", null, LocalDate.now(), owner));
 		Shop unassignedShop = shopRepository.save(new Shop(
 				"unassigned-shop", "Unassigned Shop", "Retail", "Town", null, LocalDate.now(), owner));
 		User staff = new User(
 				"assigned-shop-staff", "assigned-shop-staff", "assigned-shop-staff@example.test",
-				"unused", "STAFF", "ACTIVE", owner.getId());
+				"unused", Role.STAFF, Status.ACTIVE, owner.getId());                       // ← Status.ACTIVE
 		staff.getShops().add(assignedShop);
 		userRepository.save(staff);
 		productRepository.save(new Product(
@@ -345,7 +326,7 @@ class LeoApplicationTests {
 	void salesAcrossShopsAreReturnedNewestFirst() throws Exception {
 		User owner = userRepository.save(new User(
 				"sales-order-owner", "sales-order-owner", "sales-order-owner@example.test",
-				"unused", "OWNER", "ACTIVE", null));
+				"unused", Role.OWNER, Status.ACTIVE, null));                               // ← Status.ACTIVE
 		Shop firstShop = shopRepository.save(new Shop(
 				"sales-order-shop-a", "Sales Order Shop A", "Retail", "Town", null, LocalDate.now(), owner));
 		Shop secondShop = shopRepository.save(new Shop(
@@ -372,7 +353,7 @@ class LeoApplicationTests {
 	void convertsPaidSaleToLinkedCustomerDebtAndReversesCollectedPayment() throws Exception {
 		User owner = userRepository.save(new User(
 				"sale-debt-owner", "sale-debt-owner", "sale-debt-owner@example.test",
-				"unused", "OWNER", "ACTIVE", null));
+				"unused", Role.OWNER, Status.ACTIVE, null));                               // ← Status.ACTIVE
 		Shop shop = shopRepository.save(new Shop(
 				"sale-debt-shop", "Sale Debt Shop", "Retail", "Town", null, LocalDate.now(), owner));
 		Customer customer = new Customer(
@@ -413,7 +394,7 @@ class LeoApplicationTests {
 	void posDebtSaleCreatesLinkedDebtWithoutRecordingCashReceipt() throws Exception {
 		User owner = userRepository.save(new User(
 				"pos-debt-owner", "pos-debt-owner", "pos-debt-owner@example.test",
-				"unused", "OWNER", "ACTIVE", null));
+				"unused", Role.OWNER, Status.ACTIVE, null));                               // ← Status.ACTIVE
 		Shop shop = shopRepository.save(new Shop(
 				"pos-debt-shop", "POS Debt Shop", "Retail", "Town", null, LocalDate.now(), owner));
 		Customer customer = new Customer(
@@ -455,5 +436,4 @@ class LeoApplicationTests {
 						shop.getId(), "SALE_RECEIPT", java.time.Instant.EPOCH)
 				.isEmpty());
 	}
-
 }

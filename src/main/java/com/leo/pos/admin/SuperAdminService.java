@@ -13,6 +13,8 @@ import com.leo.pos.shop.Shop;
 import com.leo.pos.shop.ShopRepository;
 import com.leo.pos.staff.User;
 import com.leo.pos.staff.UserRepository;
+import com.leo.pos.user.Role;
+import com.leo.pos.user.Status;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -32,12 +34,12 @@ public class SuperAdminService {
 	@Transactional(readOnly = true)
 	public SuperAdminStatsDto getStats() {
 		List<User> owners = userRepo.findAll().stream()
-				.filter(u -> "OWNER".equalsIgnoreCase(u.getRole()))
+				.filter(u -> Role.OWNER.equals(u.getRole()))
 				.toList();
 
-		long activeOwners = owners.stream().filter(u -> "ACTIVE".equalsIgnoreCase(u.getStatus())).count();
+		long activeOwners = owners.stream().filter(u -> Status.ACTIVE.equals(u.getStatus())).count();
 		long totalOutlets = shopRepo.count();
-		long totalCashiers = userRepo.findAll().stream().filter(u -> "STAFF".equalsIgnoreCase(u.getRole())).count();
+		long totalCashiers = userRepo.findAll().stream().filter(u -> Role.STAFF.equals(u.getRole())).count();
 
 		List<Sale> allSales = saleRepo.findAll();
 		long totalTransactions = allSales.size();
@@ -58,7 +60,7 @@ public class SuperAdminService {
 	@Transactional(readOnly = true)
 	public List<TenantSummaryDto> getAllTenants() {
 		List<User> owners = userRepo.findAll().stream()
-				.filter(u -> "OWNER".equalsIgnoreCase(u.getRole()))
+				.filter(u -> Role.OWNER.equals(u.getRole()))
 				.toList();
 
 		List<TenantSummaryDto> dtos = new ArrayList<>();
@@ -106,7 +108,7 @@ public class SuperAdminService {
 		User owner = userRepo.findById(ownerId)
 				.orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
 
-		String nextStatus = "ACTIVE".equalsIgnoreCase(owner.getStatus()) ? "INACTIVE" : "ACTIVE";
+		Status nextStatus = Status.ACTIVE.equals(owner.getStatus()) ? Status.INACTIVE : Status.ACTIVE;
 		owner.setStatus(nextStatus);
 		return userRepo.save(owner);
 	}
