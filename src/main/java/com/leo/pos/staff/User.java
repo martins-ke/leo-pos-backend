@@ -51,7 +51,7 @@ public class User {
 	@JsonProperty("created_by")
 	private String createdBy;
 
-	@ManyToMany(fetch = FetchType.LAZY)
+	@ManyToMany(fetch = FetchType.EAGER) 
 	@JoinTable(
 		name = "user_shops",
 		joinColumns = @JoinColumn(name = "user_id"),

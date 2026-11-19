@@ -230,8 +230,7 @@ public class AuthService {
 						Instant.now()));
 			}
 		}
-		
-		String token = jwtService.generateToken(user);
+		String token = jwtService.generateToken(user); 
 		return ResponseEntity.status(200).body(new ApiResponse<>(new AuthResponse(user, token), "Login successful", true, Instant.now()));
 	}
 }

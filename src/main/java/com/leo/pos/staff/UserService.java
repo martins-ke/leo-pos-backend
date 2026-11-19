@@ -16,6 +16,7 @@ import com.leo.pos.user.Status;
 import com.leo.pos.util.IdGenarator;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 
 @Service
 public class UserService {
@@ -101,7 +102,7 @@ public class UserService {
 
 	// ─── ASSIGN SHOP TO STAFF ─────────────────────────────────────────────────
 	public ResponseEntity<ApiResponse<User>> assignShopToUser(String userId, String shopId, User actor) {
-		User staff = userRepo.findById(userId).orElse(null);
+		User staff = userRepo.findWithShopsById(userId).orElse(null);
 		if (staff == null) {
 			return ResponseEntity.status(404)
 					.body(new ApiResponse<>(null, "Staff user not found ⚠", false, Instant.now()));
