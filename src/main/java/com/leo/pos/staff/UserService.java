@@ -58,8 +58,14 @@ public class UserService {
 		}
 		String userId = IdGenarator.generateId(username, userRepo.count());
 		String hashedPassword = passwordEncoder.encode(req.password().trim());
+		String email = req.email() != null && !req.email().isBlank() ? req.email().trim().toLowerCase() : null;
 
-		User user = new User(userId, username, req.email(), hashedPassword, role, status,
+		if (email != null && userRepo.findByEmail(email).isPresent()) {
+			return ResponseEntity.status(400)
+					.body(new ApiResponse<>(null, "User with email " + email + " already exists!", false, Instant.now()));
+		}
+
+		User user = new User(userId, username, email, hashedPassword, role, status,
 				createdById != null ? createdById : "OWNER");
 		User saved = userRepo.save(user);
 

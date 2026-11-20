@@ -91,7 +91,7 @@ public class AuthService {
 
 		String username = request.username().trim();
 		String email = request.email() != null && !request.email().isBlank()
-				? request.email().trim()
+				? request.email().trim().toLowerCase()
 				: null;
 		String password = request.password().trim();
 
@@ -146,7 +146,7 @@ public class AuthService {
 	public ResponseEntity<ApiResponse<AuthResponse>> signUp(SignUpRequest request) {
 		String password = request.password().trim(); 
 		String username = request.username().trim();
-		String email = request.email() != null && !request.email().isBlank() ? request.email().trim() : null;
+		String email = request.email() != null && !request.email().isBlank() ? request.email().trim().toLowerCase() : null;
 		
 		if (email != null && userRepo.findByEmail(email).isPresent()) {
 			return ResponseEntity.status(400).body(new ApiResponse<>(null, "User with email " + email + " already exists! Email address must be unique.", false, Instant.now()));
