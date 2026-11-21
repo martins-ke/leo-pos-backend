@@ -14,7 +14,6 @@ public interface ShopRepository extends JpaRepository<Shop, String> {
 	Optional<Shop> findByName(String name);
 	List<Shop> findByUserId(String userId);
 
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select s from Shop s where s.id = :id")
+	@Query(value = "SELECT * FROM shops WHERE id = :id FOR UPDATE", nativeQuery = true)
 	Optional<Shop> findByIdForUpdate(@Param("id") String id);
 }
