@@ -60,8 +60,8 @@ public class AuthService {
 		String message = setupAvailable
 				? "Platform setup is available"
 				: platformOwnerExists
-						? "The Leo platform owner has already been set up."
-						: "Platform setup requires LEO_PLATFORM_SETUP_KEY outside the development environment.";
+						? "Access denied ⚠ Platform owner exists."
+						: "Platform setup requires Leo platform set up key";
 		return ResponseEntity.ok(new ApiResponse<>(
 				new PlatformSetupStatus(setupAvailable, setupKeyRequired),
 				message,
@@ -69,7 +69,7 @@ public class AuthService {
 				Instant.now()));
 	}
 
-	@Transactional(isolation = Isolation.SERIALIZABLE)
+	@Transactional(isolation = Isolation.REPEATABLE_READ)
 	public ResponseEntity<ApiResponse<AuthResponse>> setupPlatformOwner(
 			PlatformSetupRequest request, String remoteAddress) {
 		if (!platformSetupKey.isBlank()) {
