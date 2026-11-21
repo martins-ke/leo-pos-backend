@@ -19,6 +19,6 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 	long countByActiveTrue();
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select p from Product p where p.id = :id")
+	@Query(value = "select p from Product p where p.id = :id FOR UPDATE", nativeQuery = true)
 	Optional<Product> findByIdForUpdate(@Param("id") String id);
 }
